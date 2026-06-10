@@ -32,7 +32,7 @@ export default function Login() {
         return;
       }
 
-      navigate("/");
+      navigate("/feed");
     } catch (err) {
       setError("Something went wrong");
     } finally {

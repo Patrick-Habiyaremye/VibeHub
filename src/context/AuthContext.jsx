@@ -4,7 +4,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { supabase } from "../services/supabase";
+import { supabase } from "../supabaseClient";
 
 const AuthContext = createContext();
 
@@ -35,12 +35,15 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function signUp(email, password) {
-    return await supabase.auth.signUp({
-      email,
-      password,
-    });
-  }
+async function signUp(email, password){
+  return await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: "http://localhost:5173/confirm",
+    },
+  });
+};
 
   async function signIn(email, password) {
     return await supabase.auth.signInWithPassword({
