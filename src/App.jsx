@@ -9,6 +9,7 @@ import Feed from "./features/Feed";
 import Profile from "./features/Profile";
 import Messages from "./features/Messages";
 import Discover from "./features/Discover";
+import DailyChallenge from "./components/challenge/DailyChallenge";
 
 function App() {
  return(
@@ -41,12 +42,19 @@ function App() {
           />
 
 
-        <Route
+        {/* <Route
           path="/feed"
           element={
             <ProtectedRoute>
               <Feed />
             </ProtectedRoute>
+          }
+        /> */}
+
+        <Route
+          path="/feed"
+          element={
+              <Feed />
           }
         />
 
@@ -58,6 +66,11 @@ function App() {
         <Route
           path="/messages"
           element={<Messages />}
+        />
+
+         <Route
+          path="/challenges"
+          element={<DailyChallenge />}
         />
 
         <Route

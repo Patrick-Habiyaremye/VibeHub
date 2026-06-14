@@ -1,6 +1,8 @@
 import { Search, Bell, MessageCircle, Plus } from "lucide-react";
+import { Link } from "react-router-dom"
 
 export default function Navbar() {
+  const user = null;
   return (
     <header className="sticky top-0 z-50 bg-slate-900 border-b border-slate-700">
       <div className="max-w-7xl mx-auto h-16 px-4 flex items-center justify-between">
@@ -18,16 +20,16 @@ export default function Navbar() {
           />
         </div>
 
-        <div className="flex items-center gap-4">
-
-          <button className="text-slate-300 hover:text-white">
+        <div className="flex items-center gap-3">
+        {user ?  (
+          <>
+                    <button className="text-slate-300 hover:text-white">
             <Bell />
           </button>
 
           <button className="text-slate-300 hover:text-white">
             <MessageCircle />
           </button>
-
           <button className="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg text-black font-semibold flex items-center gap-2">
             <Plus size={18} />
             Create
@@ -38,6 +40,22 @@ export default function Navbar() {
             alt="profile"
             className="w-10 h-10 rounded-full"
           />
+          </>
+        ) : (
+          <>
+              <Link to="/login">
+                <button className="px-4 py-2 text-white border border-slate-600 rounded-lg hover:bg-slate-800">
+                  Login
+                </button>
+              </Link>
+
+              <Link to="/register">
+                <button className="px-4 py-2 bg-yellow-500 text-black rounded-lg font-semibold hover:bg-yellow-600">
+                  Sign Up
+                </button>
+              </Link>
+          </>
+        )}
 
         </div>
 
