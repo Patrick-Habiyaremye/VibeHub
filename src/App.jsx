@@ -43,46 +43,59 @@ function App() {
           />
 
 
-        {/* <Route
+        <Route
           path="/feed"
           element={
             <ProtectedRoute>
               <Feed />
             </ProtectedRoute>
           }
-        /> */}
-
-        <Route
-          path="/feed"
-          element={
-              <Feed />
-          }
         />
 
         <Route
           path="/profile"
-          element={<Profile />}
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/messages"
-          element={<Messages />}
+          element={
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          }
         />
 
-         <Route
+        <Route
           path="/challenges"
-          element={<DailyChallenge />}
+          element={
+            <ProtectedRoute>
+              <DailyChallenge />
+            </ProtectedRoute>
+          }
         />
 
         <Route
           path="/discover"
-          element={<Discover />}
+          element={
+            <ProtectedRoute>
+              <Discover />
+            </ProtectedRoute>
+          }
         />
 
-        <Route 
+        <Route
           path="/settings"
-          element={<Settings />}
-          />
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
 
       </Routes>
     </BrowserRouter>

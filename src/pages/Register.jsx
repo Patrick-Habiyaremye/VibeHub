@@ -30,14 +30,21 @@ export default function Register() {
     try {
       setIsLoading(true);
 
-      const { error } = await signUp(email, password, username);
+      const { data, error } = await signUp(email, password, username);
 
       if (error) {
         setError(error.message);
         return;
       }
 
-      navigate("/confirm");
+      // If email confirmation is disabled, signUp returns an active session,
+      // so we can send the user straight into the app. Otherwise, ask them to
+      // confirm via email.
+      if (data?.session) {
+        navigate("/feed");
+      } else {
+        navigate("/confirm");
+      }
     } catch (err) {
       setError("Something went wrong");
     } finally {
