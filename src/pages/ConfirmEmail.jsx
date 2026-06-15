@@ -7,20 +7,35 @@ export default function ConfirmEmail() {
   const navigate = useNavigate();
   const [status, setStatus] = useState("Checking...");
 
+  // useEffect(() => {
+  //   const checkSession = async () => {
+  //     const { data } = await supabase.auth.getSession();
+
+  //     if (data.session) {
+  //       setStatus("Email confirmed! Redirecting...");
+  //       setTimeout(() => navigate("/SignUpSuccess"), 2000);
+  //     } else {
+  //       setStatus("Please confirm your email from inbox.");
+  //     }
+  //   };
+
+  //   checkSession();
+  // }, [navigate]);
+
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+    const interval = setInterval(async () => {
+    const { data } = await supabase.auth.getSession();
 
-      if (data.session) {
-        setStatus("Email confirmed! Redirecting...");
-        setTimeout(() => navigate("/SignUpSuccess"), 2000);
-      } else {
-        setStatus("Please confirm your email from inbox.");
-      }
-    };
+    if (data.session) {
+      setStatus("Email confirmed! Redirecting...");
+      clearInterval(interval);
 
-    checkSession();
-  }, [navigate]);
+      setTimeout(() => navigate("/feed"), 1500);
+    }
+  }, 2000);
+
+  return () => clearInterval(interval);
+}, [navigate]);
 
   return (
     <div className="flex items-center justify-center h-screen text-white">

@@ -30,10 +30,15 @@ export default function Register() {
     try {
       setIsLoading(true);
 
-      const { error } = await signUp(
-        email,
-        password
-      );
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+    data: {
+    username,
+  },
+  },
+});
 
       if (error) {
         setError(error.message);

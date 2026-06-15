@@ -6,10 +6,11 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import SignUpSuccess from "./pages/SignUpSuccess"
 import ConfirmEmail from "./pages/ConfirmEmail";
 import Feed from "./features/Feed";
-import Profile from "./features/Profile";
+import Profile from "./features/ProfilePage2";
 import Messages from "./features/Messages";
 import Discover from "./features/Discover";
 import DailyChallenge from "./components/challenge/DailyChallenge";
+import Settings from "./features/Settings"
 
 function App() {
  return(
@@ -77,6 +78,11 @@ function App() {
           path="/discover"
           element={<Discover />}
         />
+
+        <Route 
+          path="/settings"
+          element={<Settings />}
+          />
 
       </Routes>
     </BrowserRouter>
