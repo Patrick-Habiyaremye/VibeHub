@@ -84,11 +84,30 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Make sure the logged-in user has a matching profiles row so their
+  // posts show an author instead of "Unknown User".
+  const ensureProfile = async (currentUser) => {
+    if (!currentUser) return;
+
+    const username =
+      currentUser.user_metadata?.username ||
+      currentUser.email?.split("@")[0] ||
+      "User";
+
+    const { error } = await supabase.from("profiles").upsert(
+      { id: currentUser.id, username },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+
+    if (error) console.error("ensureProfile failed:", error.message);
+  };
+
   // Get current session
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data?.user || null);
+      ensureProfile(data?.user);
       setLoading(false);
     };
 
@@ -97,6 +116,7 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user || null);
+        ensureProfile(session?.user);
       }
     );
 
@@ -104,10 +124,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   // SIGN UP
-  const signUp = (email, password) => {
+  const signUp = (email, password, username) => {
     return supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { username },
+        emailRedirectTo: `${window.location.origin}/confirm`,
+      },
     });
   };
 
