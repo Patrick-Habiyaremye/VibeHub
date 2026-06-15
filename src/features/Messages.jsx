@@ -1,6 +1,6 @@
 import Navbar from "../components/layout/Navbar";
 
-import ChatSidebar from "../components/chat/ChatSidebar";
+import ChatSidebar from "../components/chat/ChatSideBar";
 import ChatWindow from "../components/chat/ChatWindow";
 
 export default function Messages() {
