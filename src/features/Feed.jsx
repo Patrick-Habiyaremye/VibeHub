@@ -15,6 +15,17 @@ export default function Feed() {
   const [postsLoading, setPostsLoading] = useState(true);
   const { user, loading: authLoading } = useAuth();
 
+  const loadPosts = async () => {
+    setPostsLoading(true);
+    const data = await getPosts();
+    setPosts(data);
+    setPostsLoading(false);
+  };
+
+  useEffect(() => {
+    if (user) loadPosts();
+  }, [user]);
+
   if (authLoading) {
     return <p className="text-white">Loading...</p>;
   }
@@ -22,16 +33,6 @@ export default function Feed() {
   if (!user) {
     return <Navigate to="/login" />;
   }
-
-  const loadPosts = async () => {
-    const data = await getPosts();
-    setPosts(data);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadPosts();
-  }, []);
 
   return (
     <div className="bg-slate-950 min-h-screen">

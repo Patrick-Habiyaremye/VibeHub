@@ -5,7 +5,9 @@ import SignUpSuccess from "./SignUpSuccess";
 
 export default function ConfirmEmail() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState("Checking...");
+  const [status, setStatus] = useState(
+    "We sent you a confirmation link. Please check your email inbox to activate your account."
+  );
 
   // useEffect(() => {
   //   const checkSession = async () => {
