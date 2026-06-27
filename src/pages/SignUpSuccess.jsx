@@ -29,10 +29,10 @@ export default function SignUpSuccess() {
         </div>
 
         <Link
-          to="/feed"
+          to="/onboarding"
           className="block w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 rounded-lg transition"
         >
-          Continue to Feed
+          Complete Profile
         </Link>
       </div>
     </div>

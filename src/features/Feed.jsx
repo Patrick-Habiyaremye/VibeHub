@@ -1,81 +1,152 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext"
-import { Navigate } from "react-router-dom"
+import { useEffect, useState, useCallback } from "react";
+
+import { useAuth } from "../context/AuthContext";
+
 import Navbar from "../components/layout/Navbar";
 import Sidebar from "../components/layout/Sidebar";
 import RightPanel from "../components/layout/RightPanel";
+import Footer from "../components/layout/Footer";
+
 import DailyChallenge from "../components/challenge/DailyChallenge";
-import CreatePost from "../components/post/CreatePost";
-import PostCard from "../components/post/PostCard";
+import SmileMoments from "../components/moments/SmileMoments";
+
+import FeedFilters from "../components/feed/FeedFilters";
+import FeedList from "../components/feed/FeedList";
+import FeedLoading from "../components/feed/FeedLoading";
+import FeedEmpty from "../components/feed/FeedEmpty";
+
+import ReelPreview from "../components/feed/ReelPreview";
+import useReels from "../hooks/useReels";
+
+import CreatePost from "../features/post/CreatePost";
+
 import { getPosts } from "../api/posts";
+import useRealtime from "../hooks/useRealtime";
 
 export default function Feed() {
+  const { user, authLoading } = useAuth();
+  const { reels, loading } = useReels();
 
   const [posts, setPosts] = useState([]);
-  const [postsLoading, setPostsLoading] = useState(true);
-  const { user, loading: authLoading } = useAuth();
+  const [loading1, setLoading1] = useState(true);
+  const [filter, setFilter] = useState("Latest");
 
-  const loadPosts = async () => {
-    setPostsLoading(true);
-    const data = await getPosts();
-    setPosts(data);
-    setPostsLoading(false);
-  };
+  // -----------------------
+  // LOAD POSTS
+  // -----------------------
+  const loadPosts = useCallback(async () => {
+    try {
+      setLoading1(true);
+      const data = await getPosts();
+      setPosts(data || []);
+    } catch (err) {
+      console.error("Load posts error:", err);
+    } finally {
+      setLoading1(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (user) loadPosts();
-  }, [user]);
+    loadPosts();
+  }, [loadPosts]);
 
+  // -----------------------
+  // REALTIME
+  // -----------------------
+  useRealtime({
+    channelName: user?.id ? "posts-feed" : null,
+    table: "posts",
+    enabled: !!user?.id,
+    event: "INSERT",
+
+    onChange: (payload) => {
+      const newPost = payload.new;
+
+      setPosts((prev) => {
+        const exists = prev.some((p) => p.id === newPost.id);
+        if (exists) return prev;
+        return [newPost, ...prev];
+      });
+    },
+  });
+
+  // -----------------------
+  // LOADING STATE
+  // -----------------------
   if (authLoading) {
-    return <p className="text-white">Loading...</p>;
-  }
-
-  if (!user) {
-    return <Navigate to="/login" />;
+    return <FeedLoading />;
   }
 
   return (
-    <div className="bg-slate-950 min-h-screen">
-
+    <div className="bg-slate-950 min-h-screen flex flex-col">
+      
+      {/* NAVBAR */}
       <Navbar />
 
-      <div className="max-w-7xl mx-auto flex">
+      {/* MAIN LAYOUT */}
+      <div
+        className="
+          flex
+          justify-center
+          w-full
+          max-w-7xl
+          mx-auto
+          px-3
+          sm:px-4
+          lg:px-6
+          gap-6
+        "
+      >
 
+        {/* LEFT SIDEBAR (desktop only) */}
         <Sidebar />
 
-        <main className="flex-1 max-w-3xl p-6">
+        {/* CENTER FEED */}
+        <main
+          className="
+            flex-1
+            w-full
+            max-w-3xl
+            py-4
+            lg:py-6
+            pb-24
+            lg:pb-6
+          "
+        >
+          {/* STORIES */}
+          <SmileMoments user={user} />
 
+          {/* DAILY */}
           <DailyChallenge />
 
-          <CreatePost
-            onPostCreated={loadPosts}
-          />
+          {/* REELS */}
+          <ReelPreview reels={reels} loading={loading} />
 
-          {postsLoading && (
-            <p className="text-slate-400">
-              Loading posts...
-            </p>
+          {/* FILTERS */}
+          <FeedFilters active={filter} setActive={setFilter} />
+
+          {/* CREATE POST */}
+          {user && (
+            <CreatePost onPostCreated={loadPosts} />
           )}
 
-          {!postsLoading &&
-            posts.length === 0 && (
-              <p className="text-slate-400">
-                No posts found 😔
-              </p>
-            )}
+          {/* CONTENT STATES */}
+          {loading1 && <FeedLoading />}
 
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-            />
-          ))}
+          {!loading1 && posts.length === 0 && <FeedEmpty />}
 
+          {!loading1 && posts.length > 0 && (
+            <FeedList posts={posts} />
+          )}
         </main>
 
+        {/* RIGHT PANEL (desktop only) */}
         <RightPanel />
 
       </div>
+
+      {/* FOOTER (desktop only) */}
+      <Footer />
 
     </div>
   );

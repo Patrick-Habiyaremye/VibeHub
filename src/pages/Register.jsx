@@ -7,15 +7,10 @@ export default function Register() {
   const { signUp } = useAuth();
 
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] =
-    useState("");
-  const [repeatPassword, setRepeatPassword] =
-    useState("");
-
+  const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] =useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] =
-    useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -30,7 +25,7 @@ export default function Register() {
     try {
       setIsLoading(true);
 
-      const { error } = await signUp(email, password, username);
+      const { error } = await signUp(email, password);
 
       if (error) {
         setError(error.message);
@@ -78,16 +73,6 @@ export default function Register() {
               value={email}
               onChange={(e) =>
                 setEmail(e.target.value)
-              }
-            />
-
-            <input
-              type="text"
-              placeholder="Username"
-              className="w-full rounded-lg bg-slate-900 border border-slate-700 p-3 text-white"
-              value={username}
-              onChange={(e) =>
-                setUsername(e.target.value)
               }
             />
 

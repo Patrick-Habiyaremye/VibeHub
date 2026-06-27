@@ -25,19 +25,40 @@ export default function ConfirmEmail() {
   // }, [navigate]);
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-    const { data } = await supabase.auth.getSession();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (event, session) => {
 
-    if (data.session) {
-      setStatus("Email confirmed! Redirecting...");
-      clearInterval(interval);
+        if (
+          event === "SIGNED_IN" &&
+          session
+        ) {
+          navigate("/signup-success");
+        }
+      }
+    );
 
-      setTimeout(() => navigate("/feed"), 1500);
-    }
-  }, 2000);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
-  return () => clearInterval(interval);
-}, [navigate]);
+
+//   useEffect(() => {
+//     const interval = setInterval(async () => {
+//     const { data } = await supabase.auth.getSession();
+
+//     if (data.session) {
+//       setStatus("Email confirmed! Redirecting...");
+//       clearInterval(interval);
+
+//       setTimeout(() => navigate("/feed"), 1500);
+//     }
+//   }, 2000);
+
+//   return () => clearInterval(interval);
+// }, [navigate]);
 
   return (
     <div className="flex items-center justify-center h-screen text-white">
