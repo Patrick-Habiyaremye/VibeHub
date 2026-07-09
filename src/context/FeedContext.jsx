@@ -28,13 +28,42 @@ export function FeedProvider({
     try{
 
       setLoading(true);
+      const normalizePost = (post) => {
+  return {
+    id: post.id,
+    userId: post.user_id,
+    content: post.content,
 
-      const data =
-      await getPosts();
+    media: {
+      type:
+        post.media_type ||
+        (post.image_url
+          ? "image"
+          : post.video_url
+          ? "video"
+          : null),
 
-      setPosts(
-        data || []
-      );
+      url:
+        post.media_url ||
+        post.image_url ||
+        post.video_url ||
+        null,
+
+      thumbnail: post.thumbnail_url || null,
+    },
+
+    stats: {
+      smiles: post.smile_score || 0,
+      comments: post.comments_count || 0,
+      shares: post.share_count ?? post.shares_count ?? 0,
+    },
+
+    createdAt: post.created_at,
+  };
+};
+
+const data = await getPosts();
+setPosts((data || []).map(normalizePost));
 
     }
 

@@ -8,15 +8,19 @@ Play,
 
 MessageCircle,
 
-User,
+User
 
 } from "lucide-react";
 
-import { Link }
+import { Link, useLocation }
 
 from "react-router-dom";
 
 export default function MobileNav(){
+const location = useLocation()
+if(location.pathname==="/discover"){
+    return null;
+}
 
 return(
 

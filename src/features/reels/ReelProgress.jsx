@@ -1,111 +1,65 @@
-import { useEffect,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function ReelProgress({
+export default function ReelProgress({ videoRef }) {
+  const [progress, setProgress] = useState(0);
+  const rafRef = useRef(null);
 
-videoRef
+  useEffect(() => {
+    const video = videoRef?.current;
+    if (!video) return;
 
-}){
+    const update = () => {
+      if (!video.duration || isNaN(video.duration)) {
+        rafRef.current = requestAnimationFrame(update);
+        return;
+      }
 
-const [
+      const next = (video.currentTime / video.duration) * 100;
 
-progress,
+      // Avoid useless renders
+      setProgress((prev) => (Math.abs(prev - next) > 0.5 ? next : prev));
 
-setProgress
+      rafRef.current = requestAnimationFrame(update);
+    };
 
-]
+    const handlePlay = () => {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(update);
+    };
 
-=
+    const handlePause = () => {
+      cancelAnimationFrame(rafRef.current);
+    };
 
-useState(0);
+    const handleEnded = () => {
+      cancelAnimationFrame(rafRef.current);
+      setProgress(100);
+    };
 
+    const handleLoaded = () => {
+      setProgress(0);
+    };
 
-useEffect(()=>{
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("ended", handleEnded);
+    video.addEventListener("loadedmetadata", handleLoaded);
 
-const video=
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("ended", handleEnded);
+      video.removeEventListener("loadedmetadata", handleLoaded);
+    };
+  }, [videoRef]);
 
-videoRef.current;
-
-if(!video) return;
-
-const update=()=>{
-
-setProgress(
-
-(video.currentTime/
-
-video.duration)
-
-*100
-
-||0
-
-);
-
-};
-
-video.addEventListener(
-
-"timeupdate",
-
-update
-
-);
-
-return()=>{
-
-video.removeEventListener(
-
-"timeupdate",
-
-update
-
-);
-
-};
-
-},[]);
-
-
-return(
-
-<div className="
-
-absolute
-
-top-0
-
-left-0
-
-w-full
-
-h-1
-
-bg-white/20
-
-z-30
-
-">
-
-<div
-
-className="
-
-h-full
-
-bg-white
-
-"
-
-style={{
-
-width:`${progress}%`
-
-}}
-
-/>
-
-</div>
-
-);
-
+  return (
+    <div className="absolute top-0 left-0 w-full h-1 bg-white/20 z-30">
+      <div
+        className="h-full bg-white transition-[width] duration-75 ease-linear will-change-[width]"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
 }

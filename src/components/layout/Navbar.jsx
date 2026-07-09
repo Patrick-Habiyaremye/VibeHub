@@ -18,337 +18,182 @@ import {
 } from "react";
 
 import { useAuth } from "../../context/AuthContext";
+import useNotifications from "../../hooks/useNotifications";
+
 import Logo from "../ui/Logo";
+import NotificationDropdown from "../notification/NotificationDropdown";
+import NotificationBadge from "../notification/NotificationBadge";
+import NotificationModal from "../notification/NotificationModal";
 
 export default function Navbar() {
-  const {
-    user,
-    profile,
-    signOut,
-  } = useAuth();
-
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications(user);
 
   const [search, setSearch] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [openNotif, setOpenNotif] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const menuRef = useRef(null);
+  const notifRef = useRef(null);
 
+  // 🔍 SEARCH
   const handleSearch = () => {
     if (!search.trim()) return;
-
-    navigate(
-      `/search?q=${encodeURIComponent(search)}`
-    );
+    navigate(`/search?q=${encodeURIComponent(search)}`);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
+    if (e.key === "Enter") handleSearch();
   };
 
+  // ✅ SMART MOBILE DETECTION (NO RESIZE SPAM)
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target)
-      ) {
+    const media = window.matchMedia("(max-width: 768px)");
+
+    const listener = () => setIsMobile(media.matches);
+    listener();
+
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
+
+  // ✅ OUTSIDE CLICK (FIXED FOR MODAL)
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
         setShowProfileMenu(false);
+      }
+
+      // ❗ ONLY for desktop dropdown
+      if (!isMobile) {
+        if (notifRef.current && !notifRef.current.contains(e.target)) {
+          setOpenNotif(false);
+        }
       }
     }
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
-
+    document.addEventListener("mousedown", handleClickOutside);
     return () =>
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
-  }, []);
+      document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMobile]);
 
   return (
-    <header
-      className="
-        sticky
-        top-0
-        z-50
-        bg-slate-900/95
-        backdrop-blur-xl
-        border-b
-        border-slate-800
-      "
-    >
-      <div
-        className="
-          max-w-7xl
-          mx-auto
-          h-16
-          px-3
-          sm:px-4
-          lg:px-6
-          flex
-          items-center
-          justify-between
-          gap-3
-        "
-      >
+    <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800">
+      <div className="max-w-7xl mx-auto h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-3">
+
         {/* Logo */}
         <Logo />
 
-        {/* Search */}
-
-        <div
-          className="
-            hidden
-            md:flex
-            flex-1
-            max-w-xl
-            relative
-          "
-        >
+        {/* 🔍 SEARCH (Desktop) */}
+        <div className="hidden md:flex flex-1 max-w-xl relative">
           <button
             onClick={handleSearch}
-            className="
-              absolute
-              left-4
-              top-1/2
-              -translate-y-1/2
-              text-slate-400
-            "
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
           >
             <Search size={18} />
           </button>
 
           <input
             value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
+            onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search people, posts, reels..."
-            className="
-              w-full
-              rounded-full
-              bg-slate-800
-              border
-              border-slate-700
-              focus:border-yellow-500
-              outline-none
-              pl-11
-              pr-4
-              py-2.5
-              text-white
-            "
+            className="w-full rounded-full bg-slate-800 border border-slate-700 focus:border-yellow-500 outline-none pl-11 pr-4 py-2.5 text-white"
           />
         </div>
 
-        {/* Right Side */}
-
-        <div
-          className="
-            flex
-            items-center
-            gap-2
-            sm:gap-3
-          "
-        >
+        {/* RIGHT SIDE */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {user ? (
             <>
-              {/* Mobile Search */}
-
+              {/* 🔍 MOBILE SEARCH */}
               <button
                 onClick={() => navigate("/search")}
-                className="
-                  md:hidden
-                  text-slate-300
-                  hover:text-white
-                  transition
-                "
+                className="md:hidden text-slate-300 hover:text-white"
               >
                 <Search size={21} />
               </button>
 
-              {/* Notifications */}
+{/* 🔔 NOTIFICATIONS */}
+<div ref={notifRef} className="relative">
+  <button
+    type="button"
+    onClick={() => {
+      setOpenNotif((prev) => !prev);
+      setShowProfileMenu(false);
+    }}
+    className="relative text-slate-300 hover:text-white"
+  >
+    <Bell size={22} />
+    <NotificationBadge count={unreadCount} />
+  </button>
 
-              <Link
-                to="/notifications"
-                className="
-                  relative
-                  text-slate-300
-                  hover:text-white
-                  transition
-                "
-              >
-                <Bell size={22} />
+  {openNotif &&
+    (isMobile ? (
+      <NotificationModal onClose={() => setOpenNotif(false)} />
+    ) : (
+      <NotificationDropdown />
+    ))}
+</div>
 
-                {/* Example badge */}
-
-                <span
-                  className="
-                    absolute
-                    -top-1
-                    -right-1
-                    w-2
-                    h-2
-                    rounded-full
-                    bg-red-500
-                  "
-                />
-              </Link>
-
-              {/* Messages */}
-
+              {/* 💬 MESSAGES */}
               <Link
                 to="/messages"
-                className="
-                  relative
-                  text-slate-300
-                  hover:text-white
-                  transition
-                "
+                className="text-slate-300 hover:text-white"
               >
                 <MessageCircle size={22} />
               </Link>
 
-              {/* Create */}
-
+              {/* ➕ CREATE */}
               <button
-                onClick={() =>
-                  navigate("/create")
-                }
-                className="
-                  hidden
-                  lg:flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  bg-yellow-500
-                  hover:bg-yellow-400
-                  px-4
-                  py-2
-                  font-semibold
-                  text-black
-                  transition
-                "
+                onClick={() => navigate("/create")}
+                className="hidden lg:flex items-center gap-2 rounded-xl bg-yellow-500 hover:bg-yellow-400 px-4 py-2 font-semibold text-black"
               >
                 <Plus size={18} />
                 Create
               </button>
 
-              {/* Profile */}
-
-              <div
-                ref={menuRef}
-                className="relative"
-              >
+              {/* 👤 PROFILE */}
+              <div ref={menuRef} className="relative">
                 <button
-                  onClick={() =>
-                    setShowProfileMenu(
-                      !showProfileMenu
-                    )
-                  }
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                  "
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu);
+                    setOpenNotif(false); // ✅ prevent overlap
+                  }}
+                  className="flex items-center gap-2"
                 >
                   <img
                     src={
                       profile?.avatar_url ||
                       "https://ui-avatars.com/api/?name=User"
                     }
-                    alt="Profile"
-                    className="
-                      w-9
-                      h-9
-                      sm:w-10
-                      sm:h-10
-                      rounded-full
-                      border-2
-                      border-yellow-500
-                      object-cover
-                    "
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-yellow-500 object-cover"
                   />
 
-                  <ChevronDown
-                    size={16}
-                    className="
-                      hidden
-                      sm:block
-                      text-slate-400
-                    "
-                  />
+                  <ChevronDown className="hidden sm:block text-slate-400" />
                 </button>
 
                 {showProfileMenu && (
-                  <div
-                    className="
-                      absolute
-                      right-0
-                      mt-3
-                      w-56
-                      overflow-hidden
-                      rounded-2xl
-                      border
-                      border-slate-700
-                      bg-slate-800
-                      shadow-2xl
-                    "
-                  >
+                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl overflow-hidden">
                     <Link
                       to={`/profile/${user.id}`}
-                      className="
-                        block
-                        px-4
-                        py-3
-                        hover:bg-slate-700
-                        text-white
-                      "
+                      className="block px-4 py-3 hover:bg-slate-700 text-white"
                     >
                       My Profile
                     </Link>
 
                     <Link
                       to="/settings"
-                      className="
-                        block
-                        px-4
-                        py-3
-                        hover:bg-slate-700
-                        text-white
-                      "
+                      className="block px-4 py-3 hover:bg-slate-700 text-white"
                     >
                       Settings
                     </Link>
 
-                    <Link
-                      to="/supporters"
-                      className="
-                        block
-                        px-4
-                        py-3
-                        hover:bg-slate-700
-                        text-white
-                      "
-                    >
-                      My Supporters
-                    </Link>
-
                     <button
                       onClick={signOut}
-                      className="
-                        w-full
-                        text-left
-                        px-4
-                        py-3
-                        hover:bg-slate-700
-                        text-red-400
-                      "
+                      className="w-full text-left px-4 py-3 hover:bg-slate-700 text-red-400"
                     >
                       Logout
                     </button>
@@ -359,41 +204,13 @@ export default function Navbar() {
           ) : (
             <>
               <Link to="/login">
-                <button
-                  className="
-                    rounded-lg
-                    border
-                    border-slate-600
-                    px-3
-                    sm:px-4
-                    py-2
-                    text-sm
-                    sm:text-base
-                    text-white
-                    hover:bg-slate-800
-                    transition
-                  "
-                >
+                <button className="rounded-lg border border-slate-600 px-3 py-2 text-white hover:bg-slate-800">
                   Login
                 </button>
               </Link>
 
               <Link to="/register">
-                <button
-                  className="
-                    rounded-lg
-                    bg-yellow-500
-                    hover:bg-yellow-400
-                    px-3
-                    sm:px-4
-                    py-2
-                    text-sm
-                    sm:text-base
-                    font-semibold
-                    text-black
-                    transition
-                  "
-                >
+                <button className="rounded-lg bg-yellow-500 hover:bg-yellow-400 px-3 py-2 font-semibold text-black">
                   Sign Up
                 </button>
               </Link>

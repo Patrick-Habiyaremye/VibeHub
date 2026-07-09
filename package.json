@@ -10,12 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@supabase/supabase-js": "^2.108.1",
     "@tailwindcss/vite": "^4.3.0",
+    "@tanstack/react-query": "^5.101.2",
     "framer-motion": "^12.42.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-player": "^3.4.0",
     "react-router-dom": "^7.17.0",
     "tailwindcss": "^4.3.0"
   },

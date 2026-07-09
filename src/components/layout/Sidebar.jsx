@@ -9,7 +9,7 @@ const items = [
     protected: false,
   },
   {
-    label: "Reels",
+    label: "Smile Reels",
     icon: "🎥",
     to: "/discover",
     protected: true,
@@ -182,16 +182,6 @@ export default function Sidebar() {
             );
           })}
         </nav>
-
-        {/* Bottom */}
-
-        {/* <div className="mt-auto pt-6 mb-5">
-          <div className="rounded-xl bg-slate-900 border border-slate-800 p-4">
-            <p className="text-sm text-slate-400">
-              😊 Keep spreading positive vibes every day.
-            </p>
-          </div>
-        </div> */}
       </aside>
 
       {/* ================= MOBILE ================= */}

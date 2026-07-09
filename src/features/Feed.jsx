@@ -1,153 +1,189 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
+import { supabase } from "../supabaseClient";
 
 import { useAuth } from "../context/AuthContext";
-
-import Navbar from "../components/layout/Navbar";
-import Sidebar from "../components/layout/Sidebar";
-import RightPanel from "../components/layout/RightPanel";
-import Footer from "../components/layout/Footer";
-
-import DailyChallenge from "../components/challenge/DailyChallenge";
-import SmileMoments from "../components/moments/SmileMoments";
-
-import FeedFilters from "../components/feed/FeedFilters";
-import FeedList from "../components/feed/FeedList";
-import FeedLoading from "../components/feed/FeedLoading";
-import FeedEmpty from "../components/feed/FeedEmpty";
-
-import ReelPreview from "../components/feed/ReelPreview";
-import useReels from "../hooks/useReels";
+import useFeed from "../hooks/useFeed";
 
 import CreatePost from "../features/post/CreatePost";
-
-import { getPosts } from "../api/posts";
-import useRealtime from "../hooks/useRealtime";
+import ContentCard from "../features/post/ContentCard";
 
 export default function Feed() {
   const { user, authLoading } = useAuth();
-  const { reels, loading } = useReels();
 
-  const [posts, setPosts] = useState([]);
-  const [loading1, setLoading1] = useState(true);
-  const [filter, setFilter] = useState("Latest");
+  const {
+    feed,
+    fetchMore,
+    hasMore,
+    loading,
+    insertPost,
+    resetFeed,
+  } = useFeed();
+
+  const observerRef = useRef(null);
 
   // -----------------------
-  // LOAD POSTS
+  // INFINITE SCROLL
   // -----------------------
-  const loadPosts = useCallback(async () => {
-    try {
-      setLoading1(true);
-      const data = await getPosts();
-      setPosts(data || []);
-    } catch (err) {
-      console.error("Load posts error:", err);
-    } finally {
-      setLoading1(false);
-    }
-  }, []);
+  const lastRef = useCallback(
+    (node) => {
+      if (loading) return;
+
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+
+      observerRef.current = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && hasMore) {
+            fetchMore();
+          }
+        },
+        { rootMargin: "200px" }
+      );
+
+      if (node) observerRef.current.observe(node);
+    },
+    [loading, hasMore, fetchMore]
+  );
+
+  // -----------------------
+  // INITIAL LOAD + RESET ON USER CHANGE
+  // -----------------------
+  // useEffect(() => {
+  //   resetFeed();
+  //   fetchMore();
+  // }, [user]); // 🔥 important: refetch when auth changes
+
+  // -----------------------
+  // REALTIME INSERT (DEDUP SAFE)
+  // -----------------------
 
   useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+  if (!user) return;
+
+  const channel = supabase
+    .channel("feed-insert")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "posts",
+      },
+      async (payload) => {
+        const post = payload.new;
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username, avatar_url")
+          .eq("id", post.user_id)
+          .single();
+
+        insertPost({
+          ...post,
+          profiles: profile,
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [user, insertPost]);
+  // useEffect(() => {
+  //   if (!user) return;
+
+  //   const channel = supabase
+  //     .channel("feed-insert")
+  //     .on(
+  //       "postgres_changes",
+  //       {
+  //         event: "INSERT",
+  //         schema: "public",
+  //         table: "posts",
+  //       },
+  //       async (payload) => {
+  //         const post = payload.new;
+
+  //         // 🚨 prevent duplicates
+  //         const exists = feed.some((p) => p.id === post.id);
+  //         if (exists) return;
+
+  //         const { data: profile } = await supabase
+  //           .from("profiles")
+  //           .select("username, avatar_url")
+  //           .eq("id", post.user_id)
+  //           .single();
+
+  //         insertPost({
+  //           ...post,
+  //           profiles: profile,
+  //         });
+  //       }
+  //     )
+  //     .subscribe();
+
+  //   return () => {
+  //     supabase.removeChannel(channel);
+  //   };
+  // }, [user, insertPost, feed]); // include feed for dedup
 
   // -----------------------
-  // REALTIME
+  // CREATE POST HANDLER
   // -----------------------
-  useRealtime({
-    channelName: user?.id ? "posts-feed" : null,
-    table: "posts",
-    enabled: !!user?.id,
-    event: "INSERT",
-
-    onChange: (payload) => {
-      const newPost = payload.new;
-
-      setPosts((prev) => {
-        const exists = prev.some((p) => p.id === newPost.id);
-        if (exists) return prev;
-        return [newPost, ...prev];
-      });
-    },
-  });
+  const handlePostCreated = (newPost) => {
+    // ⚠️ Only insert if we actually receive the post
+    if (newPost) {
+      insertPost(newPost);
+    }
+  };
 
   // -----------------------
-  // LOADING STATE
+  // STATES
   // -----------------------
   if (authLoading) {
-    return <FeedLoading />;
+    return (
+      <p className="text-center mt-10 text-gray-400">
+        Loading...
+      </p>
+    );
   }
 
   return (
-    <div className="bg-slate-950 min-h-screen flex flex-col">
-      
-      {/* NAVBAR */}
-      <Navbar />
+    <div className="max-w-xl mx-auto p-4 space-y-4">
+      {/* CREATE POST */}
+      {user && (
+        <CreatePost onPostCreated={handlePostCreated} />
+      )}
 
-      {/* MAIN LAYOUT */}
-      <div
-        className="
-          flex
-          justify-center
-          w-full
-          max-w-7xl
-          mx-auto
-          px-3
-          sm:px-4
-          lg:px-6
-          gap-6
-        "
-      >
+      {/* EMPTY */}
+      {!loading && feed.length === 0 && (
+        <p className="text-center text-gray-400 mt-10">
+          No posts yet
+        </p>
+      )}
 
-        {/* LEFT SIDEBAR (desktop only) */}
-        <Sidebar />
+      {/* FEED */}
+      {feed.map((post, index) => {
+        const isLast = index === feed.length - 1;
 
-        {/* CENTER FEED */}
-        <main
-          className="
-            flex-1
-            w-full
-            max-w-3xl
-            py-4
-            lg:py-6
-            pb-24
-            lg:pb-6
-          "
-        >
-          {/* STORIES */}
-          <SmileMoments user={user} />
+        return (
+          <div
+            key={post.id}
+            ref={isLast ? lastRef : null}
+          >
+            <ContentCard post={post} />
+          </div>
+        );
+      })}
 
-          {/* DAILY */}
-          <DailyChallenge />
-
-          {/* REELS */}
-          <ReelPreview reels={reels} loading={loading} />
-
-          {/* FILTERS */}
-          <FeedFilters active={filter} setActive={setFilter} />
-
-          {/* CREATE POST */}
-          {user && (
-            <CreatePost onPostCreated={loadPosts} />
-          )}
-
-          {/* CONTENT STATES */}
-          {loading1 && <FeedLoading />}
-
-          {!loading1 && posts.length === 0 && <FeedEmpty />}
-
-          {!loading1 && posts.length > 0 && (
-            <FeedList posts={posts} />
-          )}
-        </main>
-
-        {/* RIGHT PANEL (desktop only) */}
-        <RightPanel />
-
-      </div>
-
-      {/* FOOTER (desktop only) */}
-      <Footer />
-
+      {/* LOADING */}
+      {loading && (
+        <p className="text-center text-gray-400">
+          Loading...
+        </p>
+      )}
     </div>
   );
 }

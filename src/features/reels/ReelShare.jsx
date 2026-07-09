@@ -1,200 +1,97 @@
-import { useState } from "react";
-
-import {
-
-uploadReel
-
-}
-
-from "../../api/reels";
-
-
-export default function ReelUpload(){
-
-const [
-
-video,
-
-setVideo
-
-]
-
-=
-
-useState(null);
-
-const [
-
-caption,
-
-setCaption
-
-]
-
-=
-
-useState("");
-
-const [
-
-loading,
-
-setLoading
-
-]
-
-=
-
-useState(false);
-
-
-const handleUpload=
-
-async()=>{
-
-if(!video) return;
-
-try{
-
-setLoading(true);
-
-await uploadReel({
-
-video,
-
-caption
-
-});
-
-alert(
-
-"Reel uploaded"
-
-);
-
-}
-
-catch(err){
-
-console.error(err);
-
-}
-
-finally{
-
-setLoading(false);
-
-}
-
-};
-
-
-return(
-
-<div className="
-
-bg-slate-800
-
-p-6
-
-rounded-xl
-
-">
-
-<input
-
-type="file"
-
-accept="video/*"
-
-onChange={(e)=>
-
-setVideo(
-
-e.target.files[0]
-
-)
-
-}
-
-/>
-
-
-<textarea
-
-value={caption}
-
-onChange={(e)=>
-
-setCaption(
-
-e.target.value
-
-)
-
-}
-
-placeholder="Share positivity 🌈"
-
-className="
-
-w-full
-
-mt-4
-
-bg-slate-900
-
-p-3
-
-rounded-lg
-
-text-white
-
-"
-
-/>
-
-
-<button
-
-onClick={handleUpload}
-
-className="
-
-mt-4
-
-bg-yellow-500
-
-text-black
-
-px-4
-
-py-2
-
-rounded-lg
-
-"
-
->
-
-{
-
-loading
-
-?
-
-"Uploading..."
-
-:
-
-"Upload Reel"
-
-}
-
-</button>
-
-</div>
-
-);
-
+import { useState, useCallback } from "react";
+import { Share2, Link as LinkIcon, Check } from "lucide-react";
+
+export default function ReelShare({
+  reelId,
+  title = "Check this reel",
+  caption = "",
+}) {
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const shareUrl = `${window.location.origin}/reel/${reelId}`;
+
+  // --------------------------
+  // Copy fallback
+  // --------------------------
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+  };
+
+  // --------------------------
+  // Native share (mobile)
+  // --------------------------
+  const handleShare = useCallback(async () => {
+    if (loading) return;
+
+    try {
+      setLoading(true);
+
+      if (navigator.share) {
+        await navigator.share({
+          title,
+          text: caption,
+          url: shareUrl,
+        });
+      } else {
+        await copyToClipboard();
+      }
+    } catch (err) {
+      // User canceled OR error → fallback
+      console.warn("Share failed or canceled", err);
+      await copyToClipboard();
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, shareUrl, title, caption]);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+
+      {/* SHARE BUTTON */}
+      <button
+        onClick={handleShare}
+        disabled={loading}
+        aria-label="Share reel"
+        className="
+          text-white
+          p-3
+          rounded-full
+          bg-black/40
+          hover:bg-black/60
+          transition
+          disabled:opacity-50
+        "
+      >
+        <Share2 size={20} />
+      </button>
+
+      {/* COPY LINK BUTTON (explicit fallback UI) */}
+      <button
+        onClick={copyToClipboard}
+        className="
+          flex items-center gap-1
+          text-xs text-gray-300
+          hover:text-white
+          transition
+        "
+      >
+        {copied ? (
+          <>
+            <Check size={14} /> Copied
+          </>
+        ) : (
+          <>
+            <LinkIcon size={14} /> Copy
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
