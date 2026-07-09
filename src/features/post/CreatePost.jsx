@@ -7,7 +7,7 @@ import {ContentApi} from "../../api/contentApi";
 import ComposerHeader from "./create/ComposerHeader";
 import ComposerTextarea from "./create/ComposerTextarea";
 import ComposerToolbar from "./create/ComposerToolbar";
-import ComposerPreview from "./create/ComposerPreview";
+//import ComposerPreview from "./create/ComposerPreview";
 import ComposerMediaPreview from "./create/ComposerMediaPreview";
 import ComposerAudience from "./create/ComposerAudience";
 import ComposerFooter from "./create/ComposerFooter";
