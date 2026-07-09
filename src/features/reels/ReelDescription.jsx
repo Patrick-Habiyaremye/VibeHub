@@ -1,63 +1,43 @@
 export default function ReelDescription({
+  content = "",
+  hashtags = [],
+}) {
+  // Ensure hashtags are always safe
+  const safeTags = Array.isArray(hashtags)
+    ? hashtags.filter(Boolean)
+    : [];
 
-caption,
+  return (
+    <div className="mt-2 space-y-2">
 
-hashtags=[]
+      {/* CAPTION */}
+      {caption && (
+        <p className="text-white text-sm leading-relaxed break-words">
+          {caption}
+        </p>
+      )}
 
-}){
+      {/* HASHTAGS */}
+      {safeTags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {safeTags.map((tag, index) => (
+            <span
+              key={`${tag}-${index}`}
+              className="
+                text-blue-400
+                text-xs
+                font-medium
+                hover:text-blue-300
+                cursor-pointer
+                transition
+              "
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
 
-return(
-
-<div className="mt-2">
-
-<p className="text-white">
-
-{caption}
-
-</p>
-
-<div className="
-
-flex
-
-gap-2
-
-mt-2
-
-flex-wrap
-
-">
-
-{
-
-hashtags.map(tag=>(
-
-<span
-
-key={tag}
-
-className="
-
-text-blue-400
-
-text-sm
-
-"
-
->
-
-#{tag}
-
-</span>
-
-))
-
-}
-
-</div>
-
-</div>
-
-);
-
+    </div>
+  );
 }

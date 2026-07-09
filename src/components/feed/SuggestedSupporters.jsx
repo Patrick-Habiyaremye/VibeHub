@@ -76,10 +76,6 @@ export default function SuggestedSupporters() {
   const [users, setUsers] =
     useState([]);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
   async function loadUsers() {
 
     const { data } =
@@ -90,6 +86,10 @@ export default function SuggestedSupporters() {
 
     setUsers(data || []);
   }
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   return (
     <div className="

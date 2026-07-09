@@ -1,10 +1,31 @@
+// import { Navigate } from "react-router-dom";
+// import useAdmin from "../hooks/useAdmin";
+
+// export default function AdminOnly({ children }) {
+//   const isAdmin = useAdmin();
+
+//   if (!isAdmin) {
+//     return <Navigate to="/feed" replace />;
+//   }
+
+//   return children;
+// }
+
 import { Navigate } from "react-router-dom";
-import useAdmin from "../hooks/useAdmin";
+import { useAuth } from "../../context/AuthContext";
 
 export default function AdminOnly({ children }) {
-  const isAdmin = useAdmin();
+  const { profile, profileLoading } = useAuth();
 
-  if (!isAdmin) {
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  if (profile?.role !== "admin") {
     return <Navigate to="/feed" replace />;
   }
 

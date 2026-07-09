@@ -12,10 +12,11 @@ export async function getProfile(userId) {
   return data;
 }
 
-export async function updateProfile(
-  userId,
-  updates
-) {
+export async function updateProfile(updates) {
+  const { data: session } = await supabase.auth.getUser();
+
+  const userId = session.user.id;
+
   const { data, error } = await supabase
     .from("profiles")
     .update(updates)

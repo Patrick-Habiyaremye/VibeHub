@@ -1,5 +1,5 @@
 import PostCard from "../../features/post/PostCard";
-import VideoPostCard from "../../features/post/VideoPostCard";
+import VideoRenderer from "../../features/post/VideoRenderer";
 
 export default function FeedList({ posts = [] }) {
   if (!posts || posts.length === 0) {
@@ -26,7 +26,7 @@ export default function FeedList({ posts = [] }) {
             key={post.id}
             className="w-full"
           >
-            <VideoPostCard post={post} />
+            <VideoRenderer post={post} />
           </div>
         ) : (
           <div

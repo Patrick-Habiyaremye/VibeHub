@@ -1,4 +1,4 @@
-import Navbar from "../components/layout/Navbar";
+//import Navbar from "../components/layout/Navbar";
 import Sidebar from "../components/layout/Sidebar";
 
 import ProfileSettings from "../components/settings/ProfileSettings";
@@ -11,7 +11,7 @@ export default function Settings() {
   return (
     <div className="bg-slate-950 min-h-screen">
 
-      <Navbar />
+      {/* <Navbar /> */}
 
       <div className="max-w-7xl mx-auto flex">
 

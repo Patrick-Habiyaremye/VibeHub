@@ -4,8 +4,8 @@ import { Navigate } from "react-router-dom";
 
 export default function AdminRoute({ children }) {
   const { user, profile, authLoading } = useAuth();
-
-  if (authLoading) return null;
+  if (authLoading || !profile) return <div>Loading...</div>;
+  // if (authLoading) return null;
 
   if (!user) return <Navigate to="/login" replace />;
 

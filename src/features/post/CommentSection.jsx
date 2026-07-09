@@ -19,118 +19,55 @@ export default function CommentSection({
   = useState(false);
 
   const loadComments = async () => {
-
-    const {
-      data,
-      error
-    } = await supabase
+    const { data, error } = await supabase
       .from("comments")
       .select(`
         *,
-        profiles (
+        profiles:profiles!comments_user_id_fkey (
           username,
           avatar_url
         )
       `)
-      .eq("post_id",postId)
-      .order(
-        "created_at",
-        {
-          ascending:true
-        }
-      );
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
 
-    if(error){
-
+    if (error) {
       console.error(error);
-
       return;
     }
 
     setComments(data || []);
-
   };
 
-  useEffect(()=>{
+useEffect(() => {
+  let isMounted = true;
 
-    loadComments();
+  const init = async () => {
+    if (!isMounted) return;
+    await loadComments();
+  };
 
-  },[postId]);
+  init();
 
-  // useEffect(()=>{
+  const channel = supabase
+    .channel(`comments-${postId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "comments",
+        filter: `post_id=eq.${postId}`,
+      },
+      () => loadComments()
+    )
+    .subscribe();
 
-  //   const channel = supabase
-
-  //     .channel(
-  //       `comments-${postId}`
-  //     )
-
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event:"INSERT",
-  //         schema:"public",
-  //         table:"comments",
-  //         filter:`post_id=eq.${postId}`
-  //       },
-  //       (payload)=>{
-
-  //         setComments(prev=>[
-  //           ...prev,
-  //           payload.new
-  //         ]);
-
-  //       }
-  //     )
-
-  //     .subscribe();
-
-  //   return ()=>{
-
-  //     supabase.removeChannel(
-  //       channel
-  //     );
-
-  //   };
-
-  // },[postId]);
-
-  useEffect(()=>{
-
-loadComments();
-
-const channel =
-supabase
-.channel(
-`comments-${postId}`
-)
-
-.on(
-"postgres_changes",
-{
-event:"*",
-schema:"public",
-table:"comments",
-filter:`post_id=eq.${postId}`
-},
-()=>{
-
-loadComments();
-
-}
-)
-
-.subscribe();
-
-return()=>{
-
-supabase.removeChannel(
-channel
-);
-
-};
-
-},[postId]);
+  return () => {
+    isMounted = false;
+    supabase.removeChannel(channel);
+  };
+}, [postId]);
 
   const addComment = async()=>{
 

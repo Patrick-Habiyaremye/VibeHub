@@ -22,7 +22,7 @@ export default function NotificationItem({
   onDelete,
 
 }) {
-
+  const [open, setOpen] = useState(false);
   const actor =
 
     notification.sender?.username ||

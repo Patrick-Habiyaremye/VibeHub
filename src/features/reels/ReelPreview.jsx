@@ -36,7 +36,7 @@ export default function ReelPreview({ reels = [], loading }) {
           >
             {/* VIDEO */}
             <video
-              src={reel.media_url}
+              src={reel.videoUrl}
               className="w-full h-full object-cover"
               muted
               loop
@@ -54,7 +54,7 @@ export default function ReelPreview({ reels = [], loading }) {
             {/* META */}
             <div className="absolute bottom-2 left-2 right-2 text-white text-xs">
               <p className="truncate">
-                {reel.title || "Smile moment"}
+                {reel.content || "Smile moment"}
               </p>
             </div>
           </div>
