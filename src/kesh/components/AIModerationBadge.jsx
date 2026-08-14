@@ -1,3 +1,5 @@
+// components/AIModerationBadge.jsx
+
 export default function AIModerationBadge({ result }) {
   if (!result) return null;
 

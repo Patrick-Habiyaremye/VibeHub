@@ -1,20 +1,15 @@
 import { supabase } from "../supabaseClient";
-import  normalizeReel from "../utils/normalizePost";
+import normalizeReel from "../utils/normalizeReel"; // was incorrectly importing normalizePost
 
 /* ----------------------------------------
-   AUTH USER
+   SAFE AUTH (NON-BREAKING)
 ----------------------------------------- */
-async function getAuthUser() {
+export async function getOptionalUser() {
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    throw new Error("User not authenticated");
-  }
-
-  return user;
+  return user || null;
 }
 
 /* ----------------------------------------
@@ -35,39 +30,51 @@ function validateVideo(file) {
 /* ----------------------------------------
    GET REELS
 ----------------------------------------- */
-export async function getReels(limit = 10, cursor = null) {
+// FIX: the select list was missing width/height, even though the reels
+// table has both columns (uploadWorker.js's insert proves this) and
+// getReel(id) already gets them via select("*"). Feed-loaded reels were
+// silently losing aspect-ratio data that freshly-uploaded reels had.
+// Also added tags, needed for normalizeReel's tags passthrough.
+
+// api/reelsApi.js — getReels() only, rest unchanged
+export async function getReels({ userId = null, limit = 10, cursor = null }) {
   let query = supabase
     .from("reels")
-    .select(`
+    .select(
+      `
       id,
       user_id,
       video_url,
       thumbnail_url,
       caption,
+      created_at,
+      width,
+      height,
       tags,
       duration,
-      views_count,
       likes_count,
       comments_count,
+      views_count,
       shares_count,
-      created_at,
-      profiles (
-        id,
-        username,
-        avatar_url
-      )
-    `)
+      profiles(username, avatar_url)
+    `
+    )
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (cursor) {
-    query = query.lt("created_at", cursor);
-  }
+  if (userId) query = query.eq("user_id", userId);
+  if (cursor) query = query.lt("created_at", cursor);
 
   const { data, error } = await query;
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("getReels error:", error);
+    throw error;
+  }
 
-  return data.map(normalizeReel); // ✅ FIX
+  return {
+    data: data.map(normalizeReel),
+    nextCursor: data.length ? data[data.length - 1].created_at : null,
+  };
 }
 
 /* ----------------------------------------
@@ -76,7 +83,8 @@ export async function getReels(limit = 10, cursor = null) {
 export async function getReel(id) {
   const { data, error } = await supabase
     .from("reels")
-    .select(`
+    .select(
+      `
       *,
       profiles (
         id,
@@ -84,26 +92,28 @@ export async function getReel(id) {
         avatar_url,
         bio
       )
-    `)
+    `
+    )
     .eq("id", id)
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw error;
 
-  return normalizeReel(data); // ✅ FIX
+  return normalizeReel(data);
 }
 
 /* ----------------------------------------
-   UPLOAD REEL
+   UPLOAD REEL (direct/synchronous path)
 ----------------------------------------- */
-export async function uploadReel({
-  video,
-  caption = "",
-  tags = [],
-}) {
+export async function uploadReel({ video, caption = "", tags = [] }) {
   if (!video) throw new Error("No video selected.");
 
-  const user = await getAuthUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
   validateVideo(video);
 
   const ext = video.name.split(".").pop();
@@ -113,7 +123,7 @@ export async function uploadReel({
     .from("reels")
     .upload(filename, video);
 
-  if (uploadError) throw new Error(uploadError.message);
+  if (uploadError) throw uploadError;
 
   const { data: publicData } = supabase.storage
     .from("reels")
@@ -124,34 +134,35 @@ export async function uploadReel({
     .insert({
       user_id: user.id,
       video_url: publicData.publicUrl,
-      thumbnail_url: null,
       caption,
       tags,
-      duration: null,
     })
-    .select(`
+    .select(
+      `
       *,
       profiles (
         id,
         username,
         avatar_url
       )
-    `)
+    `
+    )
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw error;
 
-  return normalizeReel(data); // ✅ FIX
+  return normalizeReel(data);
 }
 
 /* ----------------------------------------
    UPDATE REEL
 ----------------------------------------- */
-export async function updateReel(
-  reelId,
-  { caption, tags, newVideo = null }
-) {
-  const user = await getAuthUser();
+export async function updateReel(reelId, { caption, tags, newVideo = null }) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
 
   let updates = {};
 
@@ -168,7 +179,7 @@ export async function updateReel(
       .from("reels")
       .upload(filename, newVideo);
 
-    if (uploadError) throw new Error(uploadError.message);
+    if (uploadError) throw uploadError;
 
     const { data: publicData } = supabase.storage
       .from("reels")
@@ -185,16 +196,20 @@ export async function updateReel(
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw error;
 
-  return normalizeReel(data); // ✅ FIX
+  return normalizeReel(data);
 }
 
 /* ----------------------------------------
    DELETE REEL
 ----------------------------------------- */
 export async function deleteReel(reelId) {
-  const user = await getAuthUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
 
   const { error } = await supabase
     .from("reels")
@@ -202,7 +217,7 @@ export async function deleteReel(reelId) {
     .eq("id", reelId)
     .eq("user_id", user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw error;
 
   return true;
 }

@@ -1,151 +1,138 @@
-import { useEffect, useState, useCallback } from "react";
-import { supabase } from "../../supabaseClient";
+//C:\code\KeshApp\VibeHub\src\components\moments\SmileMoments.jsx
+// import SmileMomentCard from "./SmileMomentCard";
+// import CreateSmileMoment from "./CreateSmileMoment";
+// import { useMoments } from "./MomentsProvider";
 
+// export default function SmileMoments({ user }) {
+//   const {
+//     loading,
+//     recentGroups,
+//     viewedGroups,
+//     viewedIds,
+//     recentlyMovedUserIds,
+//     openMoment,
+//     handleCreated,
+//   } = useMoments();
+
+//   if (loading) {
+//     return (
+//       <div className="flex gap-3 overflow-hidden py-3">
+//         {[1, 2, 3, 4, 5].map((i) => (
+//           <div key={i} className="w-14 h-14 rounded-full bg-slate-700 animate-pulse" />
+//         ))}
+//       </div>
+//     );
+//   }
+
+//   // recentGroups (unwatched) first, viewedGroups (fully watched, most
+//   // recently finished first) after — this is what puts a just-finished
+//   // moment at the tail of the row, next to the last unwatched one,
+//   // instead of leaving it sorted by original post time.
+//   const orderedGroups = [...recentGroups, ...viewedGroups];
+
+//   return (
+//     <div className="flex gap-3 overflow-x-auto py-3 scrollbar-none snap-x snap-mandatory scroll-smooth">
+//       {user && (
+//         <div className="snap-start shrink-0">
+//           <CreateSmileMoment user={user} onCreated={handleCreated} />
+//         </div>
+//       )}
+
+//       {orderedGroups.map((group) => {
+//         const authorId = group[0].user_id;
+//         const seen = group.every((m) => viewedIds.has(m.id));
+//         const justMoved = recentlyMovedUserIds.has(authorId);
+
+//         return (
+//           <div
+//             key={authorId}
+//             className={`snap-start shrink-0 ${
+//               justMoved ? "animate-[moment-slide_0.5s_ease-out]" : ""
+//             }`}
+//           >
+//             <SmileMomentCard
+//               group={group}
+//               seen={seen}
+//               onClick={() => openMoment(authorId)}
+//             />
+//           </div>
+//         );
+//       })}
+
+//       {!orderedGroups.length && !user && (
+//         <p className="text-sm text-slate-400 py-3">No smile moments yet 🌱</p>
+//       )}
+//     </div>
+//   );
+// }
+
+//C:\code\KeshApp\VibeHub\src\components\moments\SmileMoments.jsx
+import { Link } from "react-router-dom";
 import SmileMomentCard from "./SmileMomentCard";
-import StoryViewer from "./StoryViewer";
-import useSmileMoments from "../../hooks/useSmileMoments";
+import CreateSmileMoment from "./CreateSmileMoment";
+import { useMoments } from "./MomentsProvider";
 
 export default function SmileMoments({ user }) {
-  const [moments, setMoments] = useState([]);
-  const [active, setActive] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    loading,
+    recentGroups,
+    viewedGroups,
+    viewedIds,
+    recentlyMovedUserIds,
+    openMoment,
+    handleCreated,
+  } = useMoments();
 
-  // -----------------------
-  // LOAD STORIES
-  // -----------------------
-  const loadMoments = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from("smile_moments")
-        .select("*")
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      setMoments(data || []);
-    } catch (err) {
-      console.error("SmileMoments load error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadMoments();
-  }, [loadMoments]);
-
-  // -----------------------
-  // REALTIME ENGINE
-  // -----------------------
-  useSmileMoments({
-    onInsert: (story) => {
-      setMoments((prev) => {
-        const exists = prev.some((m) => m.id === story.id);
-        if (exists) return prev;
-        return [story, ...prev];
-      });
-    },
-
-    onReaction: (reaction) => {
-      setMoments((prev) =>
-        prev.map((m) =>
-          m.id === reaction.moment_id
-            ? {
-                ...m,
-                reactions_count: (m.reactions_count || 0) + 1,
-              }
-            : m
-        )
-      );
-    },
-
-    onView: (view) => {
-      setMoments((prev) =>
-        prev.map((m) =>
-          m.id === view.moment_id
-            ? {
-                ...m,
-                views_count: (m.views_count || 0) + 1,
-              }
-            : m
-        )
-      );
-    },
-  });
-
-  // -----------------------
-  // LOADING STATE
-  // -----------------------
   if (loading) {
     return (
       <div className="flex gap-3 overflow-hidden py-3">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div
-            key={i}
-            className="
-              w-14 h-14
-              rounded-full
-              bg-slate-700
-              animate-pulse
-            "
-          />
+          <div key={i} className="w-14 h-14 rounded-full bg-slate-700 animate-pulse" />
         ))}
       </div>
     );
   }
 
-  // -----------------------
-  // EMPTY STATE
-  // -----------------------
-  if (!moments.length) {
-    return (
-      <div className="text-sm text-slate-400 py-3">
-        No smile moments yet 🌱
-      </div>
-    );
-  }
+  const orderedGroups = [...recentGroups, ...viewedGroups];
 
   return (
-    <>
-      {/* STORY RING BAR (INSTAGRAM STYLE) */}
-      <div
-        className="
-          flex
-          gap-3
-          overflow-x-auto
-          py-3
-          scrollbar-none
+    <div className="flex gap-3 overflow-x-auto py-3 scrollbar-none snap-x snap-mandatory scroll-smooth">
+      {user && (
+        <div className="snap-start shrink-0 flex flex-col items-center gap-1">
+          <CreateSmileMoment user={user} onCreated={handleCreated} />
+          <Link
+            to="/moments"
+            className="text-[11px] text-white font-bold text-center leading-tight hover:text-yellow-400 transition-colors"
+          >
+            Smile Moments
+          </Link>
+        </div>
+      )}
 
-          snap-x
-          snap-mandatory
-          scroll-smooth
-        "
-      >
-        {moments.map((m, i) => (
+      {orderedGroups.map((group) => {
+        const authorId = group[0].user_id;
+        const seen = group.every((m) => viewedIds.has(m.id));
+        const justMoved = recentlyMovedUserIds.has(authorId);
+
+        return (
           <div
-            key={m.id}
-            className="snap-start shrink-0"
+            key={authorId}
+            className={`snap-start shrink-0 ${
+              justMoved ? "animate-[moment-slide_0.5s_ease-out]" : ""
+            }`}
           >
             <SmileMomentCard
-              moment={m}
-              onClick={() => setActive(i)}
+              group={group}
+              seen={seen}
+              onClick={() => openMoment(authorId)}
             />
           </div>
-        ))}
-      </div>
+        );
+      })}
 
-      {/* STORY VIEWER */}
-      {active !== null && (
-        <StoryViewer
-          moments={moments}
-          startIndex={active}
-          user={user}
-          onClose={() => setActive(null)}
-        />
+      {!orderedGroups.length && !user && (
+        <p className="text-sm text-slate-400 py-3">No smile moments yet 🌱</p>
       )}
-    </>
+    </div>
   );
 }

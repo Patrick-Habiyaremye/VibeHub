@@ -1,297 +1,359 @@
-// export function normalizePost(raw) {
-//   if (!raw) return null;
-
-//   const isVideo =
-//     raw.media_type === "video" ||
-//     raw.video_url;
-
-//   return {
-//     id: raw.id,
-
-//     type: isVideo ? "reel" : "post",
-
-//     content: raw.content || "",
-
-//     media: {
-//       kind: isVideo
-//         ? "video"
-//         : raw.image_url
-//         ? "image"
-//         : "quote",
-
-//       src:
-//         raw.video_url ||
-//         raw.image_url ||
-//         raw.media_url ||
-//         null,
-
-//       thumbnail: raw.thumbnail_url || null,
-//     },
-
-//     profiles: raw.profiles || {
-//       username: "Unknown",
-//       avatar_url: null,
-//     },
-
-//     created_at: raw.created_at,
-//   };
-// }
-
-// export function normalizePost(raw) {
-//   if (!raw) return null;
-
-//   const isVideo =
-//     raw.media_type === "video" || !!raw.video_url;
-
-//   const isImage =
-//     raw.media_type === "image" || !!raw.image_url;
-
-//   let kind = null;
-//   let src = null;
-
-//   if (isVideo) {
-//     kind = "video";
-//     src = raw.video_url;
-//   } else if (isImage) {
-//     kind = "image";
-//     src = raw.image_url;
-//   } else if (raw.content) {
-//     kind = "quote";
-//     src = null;
-//   }
-
-//   return {
-//     id: raw.id,
-
-//     // 🔥 Feed type (used for reels vs posts)
-//     type: kind === "video" ? "reel" : "post",
-
-//     content: raw.content || "",
-
-//     media: {
-//       kind,                // ✅ ALWAYS: "video" | "image" | "quote" | null
-//       src,                 // ✅ ALWAYS null or string
-//       thumbnail: raw.thumbnail_url || null,
-//     },
-
-//     profiles: raw.profiles || {
-//       username: "Unknown",
-//       avatar_url: null,
-//     },
-
-//     created_at: raw.created_at,
-//   };
-// }
-
-// export default function normalizePost(raw) {
-//   if (!raw) return null;
-
-//   let media = null;
-
-//   // ✅ HANDLE NEW STRUCTURE (from DB)
-//   if (raw.media) {
-//     if (raw.media.kind === "image" && raw.media.url) {
-//       media = {
-//         kind: "image",
-//         src: raw.media.url,
-//         alt: "post image",
-//       };
-//     }
-
-//     if (raw.media.kind === "video" && raw.media.url) {
-//       media = {
-//         kind: "video",
-//         src: raw.media.url,
-//         poster: raw.thumbnail_url || "",
-//       };
-//     }
-
-//     if (raw.media.kind === "text") {
-//       media = {
-//         kind: "quote",
-//         content: raw.content,
-//       };
-//     }
-//   }
-
-//   return {
-//     id: raw.id,
-//     content: raw.content,
-//     created_at: raw.created_at,
-//     profiles: raw.profiles,
-//     media,
-//   };
-// }
-
-// export default function normalizePost(raw) {
-//   console.log("🔧 RAW POST:", raw);
-
-//   let type = null;
-//   let url = null;
-
-//   // ✅ PRIORITY: use raw.media if it exists
-//   if (raw.media) {
-//     type = raw.media.kind || null;
-
-//     // 🔥 IMPORTANT: build public URL from path
-//     if (raw.media.url) {
-//       url = raw.media.url;
-//     } else if (raw.media.path) {
-//       url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${raw.media.path}`;
-//     }
-//   }
-
-//   // ✅ fallback (only if NO media exists)
-//   if (!type) {
-//     if (raw.content) {
-//       type = "quote";
-//     }
-//   }
-
-//   // const normalized = {
-//   //   id: raw.id,
-//   //   content: raw.content,
-//   //   created_at: raw.created_at,
-//   //   profiles: raw.profiles,
-
-//   //   media: {
-//   //     type,
-//   //     url,
-//   //   },
-//   // };
-
-//   const normalized = {
-//   id: raw.id,
-//   content: raw.content,
-//   created_at: raw.created_at,
-//   profiles: raw.profiles,
+// src/utils/normalizePost.js
+//
+// CANONICAL POST NORMALIZER
+//
+// Every post entering the frontend should pass through this function.
+//
+// Canonical shape:
+//
+// {
+//   id,
+//   user_id,
+//   content,
+//   type: "quote" | "image" | "video" | null,
+//
 //   media: {
+//     kind,
 //     type,
 //     url,
+//     path,
+//     poster,
+//     thumbnail,
 //   },
-// };
-// console.log("✅ NORMALIZED:", normalized);
-//   return normalized;
+//
+//   style: {
+//     background,
+//   },
+//
+//   user: {
+//     id,
+//     username,
+//     fullName,
+//     avatar,
+//   },
+//
+//   createdAt,
+//   updatedAt,
+//   created_at,
+//   updated_at,
+//
+//   reaction_count,
+//   comment_count,
+//
+//   stats: {
+//     likes,
+//     comments,
+//   },
+//
+//   commentsPreview,
+//   deleted,
 // }
 
+function toFiniteNumber(value, fallback = 0) {
+  const number = Number(value);
 
-// export default function normalizePost(raw) {
-//   if (!raw) return null;
+  return Number.isFinite(number) ? number : fallback;
+}
 
-//   const media = raw.media ?? {};
+function buildPublicStorageUrl(path) {
+  if (!path || typeof path !== "string") {
+    return null;
+  }
 
-//   //----------------------------------
-//   // MEDIA TYPE
-//   //----------------------------------
+  // Already a complete URL.
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
 
-//   const type =
-//     media.type ??
-//     media.kind ??
-//     (raw.content ? "quote" : null);
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL;
 
-//   //----------------------------------
-//   // MEDIA URL
-//   //----------------------------------
+  if (!baseUrl) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[normalizePost] VITE_SUPABASE_URL is missing"
+      );
+    }
 
-//   let url =
-//     media.url ??
-//     null;
+    return null;
+  }
 
-//   // Build public URL if only a storage path exists.
-//   if (!url && media.path) {
-//     url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/posts/${media.path}`;
-//   }
+  return `${baseUrl}/storage/v1/object/public/posts/${path}`;
+}
 
-//   //----------------------------------
-//   // POSTER
-//   //----------------------------------
+function normalizeProfile(raw, fallbackUserId = null) {
+  if (!raw) {
+    return null;
+  }
 
-//   const poster =
-//     media.poster ??
-//     media.thumbnail ??
-//     null;
+  // Supabase relationships can occasionally arrive as an array
+  // depending on the relationship/query shape.
+  const profile = Array.isArray(raw) ? raw[0] : raw;
 
-//   //----------------------------------
-//   // NORMALIZED OBJECT
-//   //----------------------------------
+  if (!profile) {
+    return null;
+  }
 
-//   const normalized = {
-//     id: raw.id,
+  return {
+    id:
+      profile.id ??
+      fallbackUserId ??
+      null,
 
-//     content: raw.content ?? "",
+    username:
+      profile.username ??
+      null,
 
-//     created_at: raw.created_at,
+    fullName:
+      profile.full_name ??
+      profile.fullName ??
+      null,
 
-//     profiles: raw.profiles ?? null,
+    avatar:
+      profile.avatar_url ??
+      profile.avatarUrl ??
+      null,
+  };
+}
 
-//     media: {
-//       type,
-//       url,
-//       poster,
-//     },
-//   };
+function normalizeMedia(raw, content) {
+  const rawMedia = raw?.media;
 
-//   console.log("✅ NORMALIZED POST:", normalized);
+  let kind =
+    rawMedia?.kind ??
+    rawMedia?.type ??
+    raw?.media_kind ??
+    raw?.media_type ??
+    raw?.type ??
+    null;
 
-//   return Object.freeze(normalized);
-// }
+  /*
+   * Quote fallback.
+   *
+   * Important:
+   * Do not assume every text post is a quote if the database explicitly
+   * says it has another type.
+   */
+  if (!kind && typeof content === "string" && content.trim()) {
+    kind = "quote";
+  }
+
+  if (
+    kind !== "quote" &&
+    kind !== "image" &&
+    kind !== "video"
+  ) {
+    return null;
+  }
+
+  // ----------------------------------------
+  // QUOTE
+  // ----------------------------------------
+
+  if (kind === "quote") {
+    return {
+      kind: "quote",
+      type: "quote",
+      url: null,
+      path: null,
+      poster: null,
+      thumbnail: null,
+    };
+  }
+
+  // ----------------------------------------
+  // IMAGE / VIDEO
+  // ----------------------------------------
+
+  const path =
+    rawMedia?.path ??
+    rawMedia?.storagePath ??
+    rawMedia?.storage_path ??
+    null;
+
+  const url =
+    rawMedia?.url ??
+    rawMedia?.publicUrl ??
+    rawMedia?.public_url ??
+    buildPublicStorageUrl(path);
+
+  const poster =
+    rawMedia?.poster ??
+    rawMedia?.poster_url ??
+    rawMedia?.posterUrl ??
+    null;
+
+  const thumbnail =
+    rawMedia?.thumbnail ??
+    rawMedia?.thumbnail_url ??
+    rawMedia?.thumbnailUrl ??
+    null;
+
+  return {
+    kind,
+    type: kind,
+    url,
+    path,
+    poster,
+    thumbnail,
+  };
+}
 
 export default function normalizePost(raw) {
-  if (!raw) return null;
-
-  //----------------------------------
-  // MEDIA SAFE EXTRACTION
-  //----------------------------------
-
-  let type = null;
-  let url = null;
-  let poster = null;
-
-  if (raw.media) {
-    type =
-      raw.media.type ||
-      raw.media.kind ||
-      null;
-
-    url =
-      raw.media.url ||
-      (raw.media.path
-        ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/posts/${raw.media.path}`
-        : null);
-
-    poster =
-      raw.media.poster ||
-      raw.media.thumbnail ||
-      null;
+  if (!raw) {
+    return null;
   }
 
-  //----------------------------------
-  // FALLBACK → QUOTE
-  //----------------------------------
+  // ----------------------------------------
+  // IDENTITY
+  // ----------------------------------------
 
-  if (!type && raw.content) {
-    type = "quote";
-  }
+  const id =
+    raw.id ??
+    null;
 
-  //----------------------------------
-  // FINAL OBJECT
-  //----------------------------------
+  const userId =
+    raw.user_id ??
+    raw.userId ??
+    null;
 
-  const normalized = {
-    id: raw.id,
-    content: raw.content ?? "",
-    created_at: raw.created_at,
-    profiles: raw.profiles ?? null,
+  // ----------------------------------------
+  // CONTENT
+  // ----------------------------------------
 
-    // 🚫 DO NOT CREATE FAKE MEDIA
-    media:
-      type === "quote"
-        ? null
-        : type
-        ? { type, url, poster }
-        : null,
+  const content =
+    typeof raw.content === "string"
+      ? raw.content
+      : "";
+
+  // ----------------------------------------
+  // MEDIA
+  // ----------------------------------------
+
+  const media = normalizeMedia(
+    raw,
+    content
+  );
+
+  // ----------------------------------------
+  // TYPE
+  // ----------------------------------------
+
+  const type =
+    media?.kind ??
+    raw.type ??
+    null;
+
+  // ----------------------------------------
+  // USER
+  // ----------------------------------------
+
+  const user =
+    normalizeProfile(
+      raw.profiles ??
+        raw.profile ??
+        raw.user,
+      userId
+    );
+
+  // ----------------------------------------
+  // TIMESTAMPS
+  // ----------------------------------------
+
+  const createdAt =
+    raw.created_at ??
+    raw.createdAt ??
+    null;
+
+  const updatedAt =
+    raw.updated_at ??
+    raw.updatedAt ??
+    null;
+
+  // ----------------------------------------
+  // STATS
+  // ----------------------------------------
+
+  const reactionCount = toFiniteNumber(
+    raw.reaction_count ??
+      raw.reactions_count ??
+      raw.likes_count ??
+      raw.stats?.likes,
+    0
+  );
+
+  const commentCount = toFiniteNumber(
+    raw.comment_count ??
+      raw.comments_count ??
+      raw.stats?.comments,
+    0
+  );
+
+  // ----------------------------------------
+  // STYLE
+  // ----------------------------------------
+
+  const style = {
+    background:
+      raw.style?.background ??
+      raw.post_style?.background ??
+      null,
   };
 
-console.log("✅ NORMALIZED POST:", normalized);
+  // ----------------------------------------
+  // FINAL CANONICAL OBJECT
+  // ----------------------------------------
+
+  const normalized = {
+    id,
+
+    user_id: userId,
+
+    content,
+
+    type,
+
+    media,
+
+    style,
+
+    user,
+
+    createdAt,
+
+    updatedAt,
+
+    // Compatibility aliases.
+    // Keep these temporarily because existing components
+    // still use snake_case timestamps.
+    created_at: createdAt,
+    updated_at: updatedAt,
+
+    reaction_count: reactionCount,
+
+    comment_count: commentCount,
+
+    stats: {
+      likes: reactionCount,
+      comments: commentCount,
+    },
+
+    commentsPreview:
+      Array.isArray(raw.comments_preview)
+        ? raw.comments_preview
+        : Array.isArray(raw.commentsPreview)
+        ? raw.commentsPreview
+        : [],
+
+    deleted:
+      Boolean(raw.deleted),
+  };
+
+  if (import.meta.env.DEV) {
+    console.debug(
+      "[normalizePost]",
+      normalized
+    );
+  }
+
   return normalized;
 }

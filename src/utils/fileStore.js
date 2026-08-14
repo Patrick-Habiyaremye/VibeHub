@@ -1,75 +1,63 @@
-const DB_NAME = "upload_files_db";
+// utils/fileStore.js
+//
+// Stores the raw file Blobs (original or compressed) in IndexedDB, keyed
+// by upload id. Kept separate from queueStore.js (metadata) so we never
+// have to pull large binary data just to read/update status.
+
+import { openDB } from "idb";
+
+const DB_NAME = "upload-db";
 const STORE_NAME = "files";
-const DB_VERSION = 1;
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+let dbPromise;
 
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+function getDB() {
+  if (!dbPromise) {
+    dbPromise = openDB(DB_NAME, 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      },
+    });
+  }
+  return dbPromise;
 }
 
-// ✅ SAVE FILE
 export async function saveFile(id, file) {
-  const db = await openDB();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-
-    store.put(file, id);
-
-    tx.oncomplete = () => {
-      console.log("✅ File saved:", id);
-      resolve();
-    };
-
-    tx.onerror = () => reject(tx.error);
-  });
+  const db = await getDB();
+  await db.put(STORE_NAME, file, id);
 }
 
-// ✅ GET FILE
 export async function getFile(id) {
-  const db = await openDB();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-
-    const request = store.get(id);
-
-    request.onsuccess = () => {
-      console.log("📦 Loaded file:", id, request.result);
-      resolve(request.result);
-    };
-
-    request.onerror = () => reject(request.error);
-  });
+  const db = await getDB();
+  return db.get(STORE_NAME, id);
 }
 
-// ✅ DELETE FILE
 export async function deleteFile(id) {
-  const db = await openDB();
+  const db = await getDB();
+  await db.delete(STORE_NAME, id);
+}
 
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+/** All keys currently stored — used by storageIntegrity.js to find orphans. */
+export async function listFileIds() {
+  const db = await getDB();
+  return db.getAllKeys(STORE_NAME);
+}
 
-    store.delete(id);
-
-    tx.oncomplete = () => {
-      console.log("🗑️ Deleted file:", id);
-      resolve();
-    };
-    tx.onerror = () => reject(tx.error);
-  });
+/**
+ * Best-effort check for whether we likely have room for another file of
+ * `sizeBytes`. Not all browsers support storage.estimate(), so callers
+ * should treat `null` as "unknown" rather than "no room".
+ */
+export async function hasStorageRoom(sizeBytes) {
+  if (!navigator.storage?.estimate) return null;
+  try {
+    const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+    if (!quota) return null;
+    // Leave a 10% safety margin.
+    return usage + sizeBytes < quota * 0.9;
+  } catch {
+    return null;
+  }
 }

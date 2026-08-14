@@ -1,3 +1,4 @@
+// features/create/DraftManager.js
 import { DRAFT_KEY } from "./constants";
 
 export const DraftManager = {

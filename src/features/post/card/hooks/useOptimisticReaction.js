@@ -2,265 +2,208 @@ import {
   useState,
   useCallback,
   useRef,
-  useEffect
+  useEffect,
 } from "react";
 
-
 export default function useOptimisticReaction({
-
   initialReaction = null,
-
   initialCount = 0,
-
   onReact,
-
   onRemove,
-
-  onChange
-
+  onChange,
 }) {
-
-
-  const [reaction,setReaction] =
+  const [reaction, setReaction] =
     useState(initialReaction);
 
+  const [count, setCount] =
+    useState(Number(initialCount) || 0);
 
-  const [count,setCount] =
-    useState(initialCount);
-
-
-  const [loading,setLoading] =
+  const [loading, setLoading] =
     useState(false);
-
-
 
   const requestId =
     useRef(0);
 
+  /*
+   * Keep local state synchronized with the
+   * authoritative post data.
+   */
+  useEffect(() => {
+    setReaction(initialReaction ?? null);
+  }, [initialReaction]);
 
+  useEffect(() => {
+    setCount(Number(initialCount) || 0);
+  }, [initialCount]);
 
-  useEffect(()=>{
-
-    setReaction(initialReaction);
-
-  },[initialReaction]);
-
-
-
-  useEffect(()=>{
-
-    setCount(initialCount);
-
-  },[initialCount]);
-
-
-
-
-  const toggleReaction =
-  useCallback(async(type)=>{
-
-
-    if(loading)
-      return;
-
-
-
-    const currentRequest =
-      ++requestId.current;
-
-
-
-    const previous = {
-
-      reaction,
-
-      count
-
-    };
-
-
-
-    const removing =
-      reaction === type;
-
-
-
-
-    /**
-     * Optimistic update
-     */
-
-    if(removing){
-
-
-      setReaction(null);
-
-
-      setCount(
-        value =>
-        Math.max(
-          0,
-          value-1
-        )
-      );
-
-
-    }
-    else {
-
-
-      setReaction(type);
-
-
-
-      if(!reaction){
-
-        setCount(
-          value=>value+1
-        );
-
+  const toggleReaction = useCallback(
+    async (type) => {
+      if (loading) {
+        return;
       }
 
-    }
-
-
-
-    setLoading(true);
-
-
-
-    try {
-
-
-      let result;
-
-
-
-      if(removing){
-
-
-        result =
-          await onRemove?.();
-
-
-
-      }
-      else {
-
-
-        result =
-          await onReact?.(type);
-
-
-
+      if (!type) {
+        return;
       }
 
+      const currentRequest =
+        ++requestId.current;
 
+      const previous = {
+        reaction,
+        count,
+      };
 
-      /**
-       * ignore old requests
+      const removing =
+        reaction === type;
+
+      /*
+       * -----------------------------------------
+       * OPTIMISTIC STATE
+       * -----------------------------------------
        */
 
-      if(
-        currentRequest !== requestId.current
-      )
-      return;
+      let optimisticReaction;
+      let optimisticCount;
 
+      if (removing) {
+        optimisticReaction = null;
 
+        optimisticCount = Math.max(
+          0,
+          count - 1
+        );
+      } else {
+        optimisticReaction = type;
 
+        /*
+         * Changing from one reaction to another
+         * does NOT increase the total.
+         *
+         * Example:
+         *
+         * 😊 66
+         * user changes 😊 → 💡
+         * total remains 66
+         */
+        optimisticCount = reaction
+          ? count
+          : count + 1;
+      }
+
+      setReaction(optimisticReaction);
+      setCount(optimisticCount);
+      setLoading(true);
+
+      /*
+       * Notify UI immediately.
+       */
       onChange?.({
-
-        reaction:
-          removing
-          ? null
-          : type,
-
-        count
-
+        reaction: optimisticReaction,
+        count: optimisticCount,
       });
 
+      try {
+        let result;
 
+        if (removing) {
+          result = await onRemove?.(type);
+        } else {
+          result = await onReact?.(type);
+        }
 
-      return result;
+        /*
+         * Ignore stale requests.
+         */
+        if (
+          currentRequest !==
+          requestId.current
+        ) {
+          return result;
+        }
 
+        /*
+         * If the server returned an authoritative
+         * count, use it.
+         */
+        const serverReaction =
+          result?.reaction ??
+          optimisticReaction;
 
+        const serverCount =
+          Number.isFinite(
+            Number(result?.count)
+          )
+            ? Number(result.count)
+            : optimisticCount;
 
-    }
-    catch(error){
+        setReaction(serverReaction);
+        setCount(serverCount);
 
+        onChange?.({
+          reaction: serverReaction,
+          count: serverCount,
+        });
 
-      console.error(
-        "Reaction update failed",
-        error
-      );
+        return result;
+      } catch (error) {
+        console.error(
+          "Reaction update failed",
+          error
+        );
 
+        /*
+         * Roll back optimistic state.
+         */
+        if (
+          currentRequest ===
+          requestId.current
+        ) {
+          setReaction(
+            previous.reaction
+          );
 
-      /**
-       * rollback
-       */
+          setCount(
+            previous.count
+          );
 
-      setReaction(
-        previous.reaction
-      );
+          onChange?.({
+            reaction:
+              previous.reaction,
 
+            count:
+              previous.count,
+          });
+        }
 
-      setCount(
-        previous.count
-      );
-
-
-      throw error;
-
-
-    }
-    finally{
-
-
-      if(
-        currentRequest === requestId.current
-      ){
-
-        setLoading(false);
-
+        throw error;
+      } finally {
+        if (
+          currentRequest ===
+          requestId.current
+        ) {
+          setLoading(false);
+        }
       }
-
-    }
-
-
-
-  },[
-    reaction,
-    count,
-    loading,
-    onReact,
-    onRemove,
-    onChange
-  ]);
-
-
-
+    },
+    [
+      reaction,
+      count,
+      loading,
+      onReact,
+      onRemove,
+      onChange,
+    ]
+  );
 
   return {
-
-
     reaction,
-
-
     count,
-
-
     loading,
-
 
     hasReacted:
       Boolean(reaction),
 
-
-
-    toggleReaction
-
-
+    toggleReaction,
   };
-
-
 }

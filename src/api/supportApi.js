@@ -1,110 +1,86 @@
+// FILE: src/api/supportApi.js
+
 import { supabase } from "../supabaseClient";
 
-/**
- * Send support to a post.
- * One support per user per post.
- */
-export async function sendSupport(postId) {
+async function getAuthUser() {
   const {
     data: { user },
-    error: authError,
+    error,
   } = await supabase.auth.getUser();
+  if (error || !user) throw new Error("Not authenticated");
+  return user;
+}
 
-  if (authError) throw authError;
-  if (!user) throw new Error("You must be logged in.");
+/**
+ * Is the current user supporting this creator?
+ */
+export async function isSupporting(creatorId) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id === creatorId) return false;
 
-  // Check whether the user already supported the post
-  const { data: existing, error: checkError } = await supabase
-    .from("post_supports")
+  const { data, error } = await supabase
+    .from("supporters")
     .select("id")
-    .eq("post_id", postId)
-    .eq("user_id", user.id)
+    .eq("supporter_id", user.id)
+    .eq("supported_user_id", creatorId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
+
+/**
+ * Toggle support for a creator. Returns { supporting: boolean }.
+ */
+export async function toggleSupport(creatorId) {
+  const user = await getAuthUser();
+
+  if (user.id === creatorId) {
+    throw new Error("You can't support yourself.");
+  }
+
+  const { data: existing, error: checkError } = await supabase
+    .from("supporters")
+    .select("id")
+    .eq("supporter_id", user.id)
+    .eq("supported_user_id", creatorId)
     .maybeSingle();
 
   if (checkError) throw checkError;
 
   if (existing) {
-    return {
-      supported: true,
-      message: "Already supported.",
-    };
+    const { error } = await supabase
+      .from("supporters")
+      .delete()
+      .eq("id", existing.id);
+    if (error) throw error;
+    return { supporting: false };
   }
 
-  const { data, error } = await supabase
-    .from("post_supports")
-    .insert({
-      post_id: postId,
-      user_id: user.id,
-    })
-    .select()
-    .single();
-
+  const { error } = await supabase.from("supporters").insert({
+    supporter_id: user.id,
+    supported_user_id: creatorId,
+  });
   if (error) throw error;
-
-  return {
-    supported: true,
-    data,
-  };
+  return { supporting: true };
 }
 
-/**
- * Remove support from a post.
- */
-export async function removeSupport(postId) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("You must be logged in.");
-
-  const { error } = await supabase
-    .from("post_supports")
-    .delete()
-    .eq("post_id", postId)
-    .eq("user_id", user.id);
-
-  if (error) throw error;
-
-  return {
-    supported: false,
-  };
-}
-
-/**
- * Check whether the current user supports a post.
- */
-export async function hasSupported(postId) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return false;
-
-  const { data, error } = await supabase
-    .from("post_supports")
-    .select("id")
-    .eq("post_id", postId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return !!data;
-}
-
-/**
- * Get support count for a post.
- */
-export async function getSupportCount(postId) {
+export async function getSupporterCount(creatorId) {
   const { count, error } = await supabase
-    .from("post_supports")
-    .select("*", {
-      head: true,
-      count: "exact",
-    })
-    .eq("post_id", postId);
-
+    .from("supporters")
+    .select("*", { head: true, count: "exact" })
+    .eq("supported_user_id", creatorId);
   if (error) throw error;
+  return count ?? 0;
+}
 
+export async function getSupportingCount(userId) {
+  const { count, error } = await supabase
+    .from("supporters")
+    .select("*", { head: true, count: "exact" })
+    .eq("supporter_id", userId);
+  if (error) throw error;
   return count ?? 0;
 }

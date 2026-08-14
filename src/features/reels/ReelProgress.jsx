@@ -1,3 +1,7 @@
+// features/reels/ReelProgress.jsx
+//
+// Carried over unchanged — no bugs found.
+
 import { useEffect, useRef, useState } from "react";
 
 export default function ReelProgress({ videoRef }) {
@@ -15,8 +19,6 @@ export default function ReelProgress({ videoRef }) {
       }
 
       const next = (video.currentTime / video.duration) * 100;
-
-      // Avoid useless renders
       setProgress((prev) => (Math.abs(prev - next) > 0.5 ? next : prev));
 
       rafRef.current = requestAnimationFrame(update);

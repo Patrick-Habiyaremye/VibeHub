@@ -1,0 +1,4 @@
+export const GameEvents = {
+  ANSWER_SUBMITTED: "ANSWER_SUBMITTED",
+  GAME_FINISHED: "GAME_FINISHED",
+};

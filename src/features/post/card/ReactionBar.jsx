@@ -1,108 +1,108 @@
-import useReactions from "./hooks/useReactions";
+// import useReactions from "./hooks/useReactions";
 
-const reactions = [
+// const reactions = [
 
-  {
-    type: "smile",
-    emoji: "😊",
-  },
+//   {
+//     type: "smile",
+//     emoji: "😊",
+//   },
 
-  {
-    type: "inspire",
-    emoji: "💡",
-  },
+//   {
+//     type: "inspire",
+//     emoji: "💡",
+//   },
 
-  {
-    type: "respect",
-    emoji: "🙌",
-  },
+//   {
+//     type: "respect",
+//     emoji: "🙌",
+//   },
 
-  {
-    type: "hope",
-    emoji: "🌈",
-  },
+//   {
+//     type: "hope",
+//     emoji: "🌈",
+//   },
 
-  {
-    type: "kind",
-    emoji: "💛",
-  },
+//   {
+//     type: "kind",
+//     emoji: "💛",
+//   },
 
-];
+// ];
 
-export default function ReactionBar({
-  post,
-}) {
+// export default function ReactionBar({
+//   post,
+// }) {
 
-    if (!post?.id) {
-    console.warn("ReactionBar: missing post", post);
-    return null;
-    }
-  const {
+//     if (!post?.id) {
+//     console.warn("ReactionBar: missing post", post);
+//     return null;
+//     }
+//   const {
 
-    loading,
+//     loading,
 
-    react,
+//     react,
 
-  } =
-  useReactions(
-    post.id
-  );
+//   } =
+//   useReactions(
+//     post.id
+//   );
 
-  return (
+//   return (
 
-    <div
-      className="
-        flex
-        justify-around
-      "
-    >
+//     <div
+//       className="
+//         flex
+//         justify-around
+//       "
+//     >
 
-      {
+//       {
 
-        reactions.map(
-          (reaction) => (
+//         reactions.map(
+//           (reaction) => (
 
-            <button
+//             <button
 
-              key={
-                reaction.type
-              }
+//               key={
+//                 reaction.type
+//               }
 
-              disabled={
-                loading
-              }
+//               disabled={
+//                 loading
+//               }
 
-              onClick={() =>
+//               onClick={() =>
 
-                react(
-                  reaction.type
-                )
+//                 react(
+//                   reaction.type
+//                 )
 
-              }
+//               }
 
-              className="
-                text-sm
-                rounded-full
-                transition
-                hover:scale-125
-                active:scale-95
-              "
-            >
+//               className="
+//                 text-sm
+//                 rounded-full
+//                 transition
+//                 hover:scale-125
+//                 active:scale-95
+//               "
+//             >
 
-              {
-                reaction.emoji
-              }
+//               {
+//                 reaction.emoji
+//               }
 
-            </button>
+//             </button>
 
-          )
+//           )
 
-        )
+//         )
 
-      }
+//       }
 
-    </div>
+//     </div>
 
-  );
+//   );
 
-}
+// }

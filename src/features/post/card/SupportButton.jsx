@@ -1,38 +1,62 @@
-import { useState } from "react";
+// src/components/card/SupportButton.jsx
+
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
 import useSupport from "./hooks/useSupport";
 
-export default function SupportButton({ postId }) {
-  const { support, loading } = useSupport();
-  const [amount, setAmount] = useState(5);
+export default function SupportButton({
+  creatorId,
+}) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const handleSupport = async () => {
-    if (amount <= 0) return;
-    await support(postId, amount);
+  const {
+    isSupporting,
+    loading,
+    toggle,
+  } = useSupport(creatorId);
+
+  const handleClick = async () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (!creatorId || creatorId === user.id) {
+      return;
+    }
+
+    await toggle();
   };
 
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        min="1"
-        value={amount}
-        onChange={(e) =>
-          setAmount(Number(e.target.value))
-        }
-        className="w-16 bg-slate-800 p-1 rounded text-sm"
-      />
+  if (!creatorId) {
+    return null;
+  }
 
-      <button
-        onClick={handleSupport}
-        disabled={loading}
-        className="
-          bg-green-500 text-black
-          px-3 py-1 rounded text-sm
-          disabled:opacity-50
-        "
-      >
-        {loading ? "..." : "Support 💛"}
-      </button>
-    </div>
+  if (user?.id === creatorId) {
+    return null;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={loading}
+      aria-pressed={isSupporting}
+      className={`
+        flex items-center gap-2
+        text-sm transition
+        disabled:opacity-50
+        disabled:cursor-not-allowed
+        ${
+          isSupporting
+            ? "text-yellow-400"
+            : "text-gray-400 hover:text-yellow-300"
+        }
+      `}
+    >
+      {isSupporting ? "💛 Supporting" : "💛 Support"}
+    </button>
   );
 }

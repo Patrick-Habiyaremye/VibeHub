@@ -6,6 +6,8 @@ import useFeed from "../hooks/useFeed";
 
 import CreatePost from "../features/post/CreatePost";
 import ContentCard from "../features/post/ContentCard";
+import SmileMoment from "../components/moments/SmileMoments";
+// import those smile moment system to be able to use in this Feed
 
 export default function Feed() {
   const { user, authLoading } = useAuth();
@@ -41,7 +43,7 @@ export default function Feed() {
         { rootMargin: "200px" }
       );
 
-      if (node) observerRef.current.observe(node);
+      if(node) observerRef.current.observe(node);
     },
     [loading, hasMore, fetchMore]
   );
@@ -91,43 +93,6 @@ export default function Feed() {
     supabase.removeChannel(channel);
   };
 }, [user, insertPost]);
-  // useEffect(() => {
-  //   if (!user) return;
-
-  //   const channel = supabase
-  //     .channel("feed-insert")
-  //     .on(
-  //       "postgres_changes",
-  //       {
-  //         event: "INSERT",
-  //         schema: "public",
-  //         table: "posts",
-  //       },
-  //       async (payload) => {
-  //         const post = payload.new;
-
-  //         // 🚨 prevent duplicates
-  //         const exists = feed.some((p) => p.id === post.id);
-  //         if (exists) return;
-
-  //         const { data: profile } = await supabase
-  //           .from("profiles")
-  //           .select("username, avatar_url")
-  //           .eq("id", post.user_id)
-  //           .single();
-
-  //         insertPost({
-  //           ...post,
-  //           profiles: profile,
-  //         });
-  //       }
-  //     )
-  //     .subscribe();
-
-  //   return () => {
-  //     supabase.removeChannel(channel);
-  //   };
-  // }, [user, insertPost, feed]); // include feed for dedup
 
   // -----------------------
   // CREATE POST HANDLER
@@ -152,6 +117,12 @@ export default function Feed() {
 
   return (
     <div className="max-w-xl mx-auto p-4 space-y-4">
+      {/* SMILE MOMENTS */}
+      <SmileMoment user={user} />
+      
+
+       {/* put it here smile moment */}
+      
       {/* CREATE POST */}
       {user && (
         <CreatePost onPostCreated={handlePostCreated} />
