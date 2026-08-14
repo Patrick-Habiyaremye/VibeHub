@@ -9,21 +9,6 @@ export default function ConfirmEmail() {
     "We sent you a confirmation link. Please check your email inbox to activate your account."
   );
 
-  // useEffect(() => {
-  //   const checkSession = async () => {
-  //     const { data } = await supabase.auth.getSession();
-
-  //     if (data.session) {
-  //       setStatus("Email confirmed! Redirecting...");
-  //       setTimeout(() => navigate("/SignUpSuccess"), 2000);
-  //     } else {
-  //       setStatus("Please confirm your email from inbox.");
-  //     }
-  //   };
-
-  //   checkSession();
-  // }, [navigate]);
-
   useEffect(() => {
     const {
       data: { subscription },

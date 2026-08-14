@@ -1,7 +1,6 @@
 import {
   Search,
   Bell,
-  MessageCircle,
   Plus,
   ChevronDown,
 } from "lucide-react";
@@ -18,7 +17,7 @@ import {
 } from "react";
 
 import { useAuth } from "../../context/AuthContext";
-import useNotifications from "../../hooks/useNotifications";
+import { useNotifications } from "../../context/NotificationContext";
 
 import Logo from "../ui/Logo";
 import NotificationDropdown from "../notification/NotificationDropdown";
@@ -28,11 +27,20 @@ import NotificationModal from "../notification/NotificationModal";
 export default function Navbar() {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const { unreadCount } = useNotifications(user);
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    handleRead,
+    handleDelete,
+    handleReadAll,
+    isPanelOpen,
+    togglePanel,
+    closePanel,
+  } = useNotifications();
 
   const [search, setSearch] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [openNotif, setOpenNotif] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   const menuRef = useRef(null);
@@ -66,10 +74,11 @@ export default function Navbar() {
         setShowProfileMenu(false);
       }
 
-      // ❗ ONLY for desktop dropdown
+      // ❗ ONLY for desktop dropdown — the mobile modal has its own
+      // backdrop-click-to-close and shouldn't also be driven by this.
       if (!isMobile) {
         if (notifRef.current && !notifRef.current.contains(e.target)) {
-          setOpenNotif(false);
+          closePanel();
         }
       }
     }
@@ -77,11 +86,11 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () =>
       document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMobile]);
+  }, [isMobile, closePanel]);
 
   return (
     <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800">
-      <div className="max-w-7xl mx-auto h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-3">
 
         {/* Logo */}
         <Logo />
@@ -105,7 +114,7 @@ export default function Navbar() {
         </div>
 
         {/* RIGHT SIDE */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
           {user ? (
             <>
               {/* 🔍 MOBILE SEARCH */}
@@ -116,37 +125,63 @@ export default function Navbar() {
                 <Search size={21} />
               </button>
 
-{/* 🔔 NOTIFICATIONS */}
-<div ref={notifRef} className="relative">
-  <button
-    type="button"
-    onClick={() => {
-      setOpenNotif((prev) => !prev);
-      setShowProfileMenu(false);
-    }}
-    className="relative text-slate-300 hover:text-white"
-  >
-    <Bell size={22} />
-    <NotificationBadge count={unreadCount} />
-  </button>
+              {/* 🔔 NOTIFICATIONS — single shared panel, driven by context */}
+              <div ref={notifRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    togglePanel();
+                    setShowProfileMenu(false);
+                  }}
+                  className="relative text-slate-300 hover:text-white"
+                  aria-haspopup="true"
+                  aria-expanded={isPanelOpen}
+                  aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+                >
+                  <Bell size={22} />
+                  <NotificationBadge count={unreadCount} />
+                </button>
 
-  {openNotif &&
-    (isMobile ? (
-      <NotificationModal onClose={() => setOpenNotif(false)} />
-    ) : (
-      <NotificationDropdown />
-    ))}
-</div>
+                {isPanelOpen &&
+                  (isMobile ? (
+                    <NotificationModal
+                      open={isPanelOpen}
+                      onClose={closePanel}
+                      notifications={notifications}
+                      onRead={handleRead}
+                      onDelete={handleDelete}
+                      onReadAll={handleReadAll}
+                    />
+                  ) : (
+                    <NotificationDropdown
+                      notifications={notifications}
+                      unreadCount={unreadCount}
+                      loading={loading}
+                      onRead={handleRead}
+                      onDelete={handleDelete}
+                      onReadAll={handleReadAll}
+                    />
+                  ))}
+              </div>
 
               {/* 💬 MESSAGES */}
-              <Link
+              {/* <Link
                 to="/messages"
                 className="text-slate-300 hover:text-white"
               >
                 <MessageCircle size={22} />
-              </Link>
+              </Link> */}
 
-              {/* ➕ CREATE */}
+              {/* ➕ CREATE (Mobile / Tablet — icon only) */}
+              <button
+                onClick={() => navigate("/create")}
+                className="lg:hidden flex items-center justify-center text-slate-300 hover:text-white"
+                aria-label="Create"
+              >
+                <Plus size={22} />
+              </button>
+
+              {/* ➕ CREATE (Desktop — labeled) */}
               <button
                 onClick={() => navigate("/create")}
                 className="hidden lg:flex items-center gap-2 rounded-xl bg-yellow-500 hover:bg-yellow-400 px-4 py-2 font-semibold text-black"
@@ -160,7 +195,7 @@ export default function Navbar() {
                 <button
                   onClick={() => {
                     setShowProfileMenu(!showProfileMenu);
-                    setOpenNotif(false); // ✅ prevent overlap
+                    closePanel(); // ✅ prevent overlap
                   }}
                   className="flex items-center gap-2"
                 >
@@ -176,7 +211,7 @@ export default function Navbar() {
                 </button>
 
                 {showProfileMenu && (
-                  <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl overflow-hidden">
+                  <div className="absolute right-0 mt-3 w-48 sm:w-56 max-w-[90vw] rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl overflow-hidden">
                     <Link
                       to={`/profile/${user.id}`}
                       className="block px-4 py-3 hover:bg-slate-700 text-white"

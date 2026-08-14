@@ -14,7 +14,7 @@ async function getAuthUser() {
   if (error || !user) {
     throw new Error("User not authenticated");
   }
-
+  
   return user;
 }
 
@@ -61,6 +61,7 @@ export async function createPost({
   content = "",
   file = null,
   type = "quote",
+  style = {},
 }) {
   const user = await getAuthUser();
 
@@ -75,47 +76,54 @@ export async function createPost({
   let uploadedPath = null;
 
   try {
-    if (file) {
-      validateFile(file);
+    /* ---------------- FILE UPLOAD ---------------- */
+if (file) {
+  validateFile(file);
 
-      const extension =
-        file.name.split(".").pop() || "bin";
+  const extension =
+    file.name.split(".").pop() || "bin";
 
-      uploadedPath =
-        `${user.id}/${crypto.randomUUID()}.${extension}`;
+  uploadedPath =
+    `${user.id}/${crypto.randomUUID()}.${extension}`;
 
-      const { error: uploadError } =
-        await supabase.storage
-          .from("posts")
-          .upload(uploadedPath, file);
+  const { error: uploadError } =
+    await supabase.storage
+      .from("posts")
+      .upload(uploadedPath, file);
 
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
+  if (uploadError) {
+    throw new Error(uploadError.message);
+  }
 
-      const { data: signed } =
-        await supabase.storage
-          .from("posts")
-          .createSignedUrl(uploadedPath, 3600);
+  const { data: publicUrlData } = supabase.storage
+    .from("posts")
+    .getPublicUrl(uploadedPath);
 
-      media = {
-        kind: type,
-        path: uploadedPath,
-        url: signed?.signedUrl ?? null,
-      };
-    }
+  media = {
+    kind: type,
+    path: uploadedPath,
+    url: publicUrlData?.publicUrl ?? null,
+  };
+}
 
+    /* ---------------- SAVE POST ---------------- */
     const { data, error } = await supabase
       .from("posts")
       .insert({
         user_id: user.id,
         content: content.trim(),
+
         media,
+
+        style: {
+          background: style?.background || null,
+        },
       })
       .select(`
         id,
         content,
         media,
+        style,
         created_at,
         profiles(
           id,
@@ -144,15 +152,17 @@ export async function createPost({
 ------------------------------------------ */
 
 export async function getPosts({
+  userId,
   limit = 10,
   cursor = null,
-} = {}) {
+}) {
   let query = supabase
     .from("posts")
     .select(`
       id,
       content,
       media,
+      style,
       created_at,
       profiles(
         id,
@@ -160,9 +170,8 @@ export async function getPosts({
         avatar_url
       )
     `)
-    .order("created_at", {
-      ascending: false,
-    })
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
     .limit(limit);
 
   if (cursor) {
@@ -170,56 +179,9 @@ export async function getPosts({
   }
 
   const { data, error } = await query;
+  if (error) throw new Error(error.message);
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!data?.length) {
-    return [];
-  }
-
-  //-----------------------------------
-  // Generate signed URLs
-  //-----------------------------------
-
-  const paths = data
-    .map((post) => post.media?.path)
-    .filter(Boolean);
-
-  let signedMap = {};
-
-  if (paths.length) {
-    const { data: signed } =
-      await supabase.storage
-        .from("posts")
-        .createSignedUrls(paths, 3600);
-
-    signedMap = Object.fromEntries(
-      signed.map((item) => [
-        item.path,
-        item.signedUrl,
-      ])
-    );
-  }
-
-  //-----------------------------------
-  // Normalize ONCE
-  //-----------------------------------
-
-  return data.map((post) => {
-    const media = post.media ?? {};
-
-    if (media.path) {
-      media.url =
-        signedMap[media.path] ?? null;
-    }
-
-    return normalizePost({
-      ...post,
-      media,
-    });
-  });
+  return data.map(normalizePost);
 }
 
 /* ------------------------------------------
@@ -241,6 +203,7 @@ export async function updatePost(
       id,
       content,
       media,
+      style,
       created_at,
       profiles(
         id,

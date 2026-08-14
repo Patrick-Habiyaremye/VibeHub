@@ -15,135 +15,115 @@ const VideoRenderer = forwardRef(
     {
       src,
       poster,
-      autoPlay = true,
+      isActive,      // 🔥 SINGLE SOURCE OF TRUTH
+      priority = false,
+
       muted = true,
       loop = true,
       controls = true,
       overlay = true,
+
       className = "",
       onEnded,
-      onPlay,
-      onPause,
     },
     ref
   ) => {
     const videoRef = useRef(null);
     const containerRef = useRef(null);
 
-    const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(muted);
     const [progress, setProgress] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const [hasError, setHasError] = useState(false);
 
-    // ---------- PLAY / PAUSE ----------
-    const play = useCallback(async () => {
-      try {
-        await videoRef.current?.play();
-        setIsPlaying(true);
-        onPlay?.();
-      } catch (err) {
-        console.warn("Play failed:", err);
+    //--------------------------------------------------
+    // 🎯 FEED-DRIVEN PLAYBACK (CRITICAL)
+    //--------------------------------------------------
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (isActive) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+        video.currentTime = 0; // TikTok reset
       }
-    }, [onPlay]);
+    }, [isActive]);
 
-    const pause = useCallback(() => {
-      videoRef.current?.pause();
-      setIsPlaying(false);
-      onPause?.();
-    }, [onPause]);
+    //--------------------------------------------------
+    // ⚡ PRELOAD (NEXT / PREV)
+    //--------------------------------------------------
+    useEffect(() => {
+      const video = videoRef.current;
+      if (!video) return;
 
-    const togglePlay = () => {
-      isPlaying ? pause() : play();
-    };
+      if (priority) {
+        video.preload = "auto";
+        video.load();
+      }
+    }, [priority]);
 
-    // ---------- MUTE ----------
+    //--------------------------------------------------
+    // 🎚 CONTROLS
+    //--------------------------------------------------
+    const togglePlay = useCallback(() => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }, []);
+
     const toggleMute = () => {
       const video = videoRef.current;
       if (!video) return;
+
       video.muted = !video.muted;
       setIsMuted(video.muted);
     };
 
-    // ---------- PROGRESS ----------
+    //--------------------------------------------------
+    // 📊 PROGRESS
+    //--------------------------------------------------
     const handleTimeUpdate = () => {
       const video = videoRef.current;
       if (!video) return;
 
-      const percent = (video.currentTime / video.duration) * 100;
-      setProgress(percent || 0);
+      setProgress(video.currentTime);
     };
 
-    // ---------- FULLSCREEN ----------
-    const toggleFullscreen = async () => {
-      const el = containerRef.current;
-      if (!el) return;
-
-      if (!document.fullscreenElement) {
-        await el.requestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        await document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    };
-
-    // ---------- AUTOPLAY ----------
-    const handleCanPlay = async () => {
+    //--------------------------------------------------
+    // 📦 LOADING
+    //--------------------------------------------------
+    const handleCanPlay = () => {
       setIsLoading(false);
-
-      if (autoPlay) {
-        try {
-          await play();
-        } catch {}
-      }
     };
 
-    // ---------- VISIBILITY (TikTok-style) ----------
-    useEffect(() => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          const video = videoRef.current;
-          if (!video) return;
-
-          if (entry.isIntersecting) {
-            if (autoPlay) play();
-          } else {
-            pause();
-          }
-        },
-        { threshold: 0.6 }
-      );
-
-      if (containerRef.current) {
-        observer.observe(containerRef.current);
-      }
-
-      return () => observer.disconnect();
-    }, [autoPlay, play, pause]);
-
-    // ---------- ERROR ----------
+    //--------------------------------------------------
+    // ❌ ERROR
+    //--------------------------------------------------
     const handleError = () => {
       setHasError(true);
       setIsLoading(false);
     };
 
-    // ---------- EXPOSE METHODS ----------
+    //--------------------------------------------------
+    // 🎮 EXPOSE API
+    //--------------------------------------------------
     useImperativeHandle(ref, () => ({
-      play,
-      pause,
-      togglePlay,
-      toggleMute,
-      toggleFullscreen,
+      play: () => videoRef.current?.play(),
+      pause: () => videoRef.current?.pause(),
       video: videoRef.current,
     }));
 
     return (
       <div
         ref={containerRef}
-        className={`relative bg-black overflow-hidden w-full h-full ${className}`}
+        className={`relative bg-black w-full h-full overflow-hidden ${className}`}
       >
         {/* VIDEO */}
         {!hasError ? (
@@ -154,7 +134,9 @@ const VideoRenderer = forwardRef(
             muted={isMuted}
             loop={loop}
             playsInline
+            preload="metadata"
             className="w-full h-full object-cover"
+
             onClick={togglePlay}
             onTimeUpdate={handleTimeUpdate}
             onCanPlay={handleCanPlay}
@@ -169,41 +151,40 @@ const VideoRenderer = forwardRef(
           </div>
         )}
 
+        {/* OVERLAY */}
+        {overlay && (
+          <VideoOverlay
+            playing={isActive} // 🔥 derived, not state
+            loading={isLoading}
+            error={hasError}
+            muted={isMuted}
+            duration={videoRef.current?.duration || 0}
+            onPlayPause={togglePlay}
+          />
+        )}
+
+        {/* CONTROLS */}
+        {controls && (
+          <VideoControls
+            playing={isActive}
+            muted={isMuted}
+            progress={progress}
+            duration={videoRef.current?.duration || 0}
+            onPlayPause={togglePlay}
+            onMute={toggleMute}
+            onSeek={(time) => {
+              if (videoRef.current) {
+                videoRef.current.currentTime = time;
+              }
+            }}
+          />
+        )}
+
         {/* LOADING */}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
             Loading...
           </div>
-        )}
-
-        {/* OVERLAY */}
-        {overlay && (
-          <VideoOverlay
-    playing={isPlaying}
-    loading={isLoading}
-    error={hasError}
-    muted={isMuted}
-    duration={videoRef.current?.duration || 0}
-    onPlayPause={togglePlay}
-/>
-        )}
-
-        {/* CONTROLS */}
-        {controls && (
-<VideoControls
-    playing={isPlaying}
-    muted={isMuted}
-    progress={videoRef.current?.currentTime || 0}
-    duration={videoRef.current?.duration || 0}
-    onPlayPause={togglePlay}
-    onMute={toggleMute}
-    onSeek={(time) => {
-        if (videoRef.current) {
-            videoRef.current.currentTime = time;
-        }
-    }}
-    onFullscreen={toggleFullscreen}
-/>
         )}
       </div>
     );
@@ -211,6 +192,4 @@ const VideoRenderer = forwardRef(
 );
 
 VideoRenderer.displayName = "VideoRenderer";
-
 export default VideoRenderer;
-

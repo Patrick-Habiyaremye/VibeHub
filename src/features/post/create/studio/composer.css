@@ -1,0 +1,275 @@
+/* studio/composer.css
+   Design direction: "instant polaroid meets modern editor" — warm paper
+   canvas, one confident accent color per mood, chunky tactile controls.
+   Avoids the generic dark-mode-SaaS look; this is a personal, playful
+   composer, not an admin panel. */
+
+.vc-studio {
+  --vc-paper: #FBF7F0;
+  --vc-ink: #232027;
+  --vc-line: #E7DFD2;
+  font-family: "Inter", system-ui, sans-serif;
+  background: var(--vc-paper);
+  color: var(--vc-ink);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.vc-studio__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.vc-studio__title {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.vc-studio__audience {
+  border: 1px solid var(--vc-line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: white;
+  font-size: 14px;
+}
+
+.vc-studio__body {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+}
+
+@media (max-width: 720px) {
+  .vc-studio__body { grid-template-columns: 1fr; }
+}
+
+.vc-editor__blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vc-block {
+  position: relative;
+  border: 1px solid var(--vc-line);
+  border-radius: 16px;
+  padding: 16px;
+  background: white;
+}
+
+.vc-block__textarea {
+  width: 100%;
+  border: none;
+  resize: none;
+  font-size: 17px;
+  line-height: 1.5;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+}
+
+.vc-block__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: var(--vc-line);
+  color: var(--vc-ink);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.vc-block--media .vc-block__media {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  max-height: 320px;
+  object-fit: cover;
+}
+
+.vc-block__caption {
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--vc-line);
+  margin-top: 10px;
+  padding-top: 10px;
+  font-size: 14px;
+  background: transparent;
+}
+
+.vc-block--quote {
+  border: none;
+  color: white;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.vc-block__quote-text {
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 22px;
+  resize: none;
+  outline: none;
+}
+
+.vc-block__quote-text::placeholder { color: rgba(255,255,255,0.7); }
+
+.vc-block__quote-swatches { display: flex; gap: 8px; margin-top: 10px; }
+
+.vc-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  cursor: pointer;
+}
+
+.vc-swatch--active { border-color: white; }
+
+.vc-block--poll { display: flex; flex-direction: column; gap: 8px; }
+
+.vc-block__poll-question,
+.vc-block__poll-option {
+  border: 1px solid var(--vc-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+
+.vc-block__poll-add {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  color: #B5544A;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.vc-editor__tray-anchor { position: relative; margin-top: 14px; }
+
+.vc-editor__tray-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--vc-ink);
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.vc-editor__tray {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  background: white;
+  border: 1px solid var(--vc-line);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+  min-width: 180px;
+}
+
+.vc-editor__tray-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+.vc-editor__tray-item:hover { background: var(--vc-paper); }
+
+.vc-mood-picker { display: flex; gap: 8px; margin-top: 18px; }
+
+.vc-mood-chip {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 6px 16px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vc-mood-chip--active { border-color: var(--vc-ink); }
+
+.vc-preview {
+  border: 1px dashed var(--vc-line);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 240px;
+}
+
+.vc-preview--empty {
+  align-items: center;
+  justify-content: center;
+  color: #A69C8C;
+  font-style: italic;
+}
+
+.vc-preview__quote {
+  margin: 0;
+  padding: 20px;
+  border-radius: 12px;
+  color: white;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 20px;
+}
+
+.vc-preview__image, .vc-preview__video {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.vc-studio__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.vc-studio__summary { color: #8A8071; font-size: 13px; }
+
+.vc-studio__publish {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 28px;
+  background: var(--vc-ink);
+  color: white;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.vc-studio__publish:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.vc-studio__error {
+  color: #B5544A;
+  font-size: 14px;
+  margin-top: 12px;
+}

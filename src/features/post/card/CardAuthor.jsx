@@ -1,3 +1,12 @@
+// src/components/post/card/CardAuthor.jsx
+//
+// FIX: was reading raw DB column names (avatar_url) against an object
+// that's actually the canonical normalizePost().user shape (avatar,
+// fullName, camelCase) — a second instance of the same field-mismatch
+// bug as CardHeader, just silent instead of loud (falls back to the
+// default avatar image rather than showing "Unknown User", so it was
+// easy to miss). Destructures the canonical field names now.
+
 import { ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,7 +22,7 @@ export default function CardAuthor({
   const {
     id,
     username,
-    avatar_url,
+    avatar,
   } = profile;
 
   return (
@@ -29,7 +38,7 @@ export default function CardAuthor({
     >
       <img
         src={
-          avatar_url ||
+          avatar ||
           "https://ui-avatars.com/api/?background=0f172a&color=ffffff&name=User"
         }
         alt={username}

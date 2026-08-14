@@ -1,19 +1,16 @@
+// features/reels/ReelShare.jsx
+//
+// Carried over unchanged — no bugs found.
+
 import { useState, useCallback } from "react";
 import { Share2, Link as LinkIcon, Check } from "lucide-react";
 
-export default function ReelShare({
-  reelId,
-  title = "Check this reel",
-  caption = "",
-}) {
+export default function ReelShare({ reelId, title = "Check this reel", caption = "" }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const shareUrl = `${window.location.origin}/reel/${reelId}`;
 
-  // --------------------------
-  // Copy fallback
-  // --------------------------
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -24,9 +21,6 @@ export default function ReelShare({
     }
   };
 
-  // --------------------------
-  // Native share (mobile)
-  // --------------------------
   const handleShare = useCallback(async () => {
     if (loading) return;
 
@@ -34,16 +28,11 @@ export default function ReelShare({
       setLoading(true);
 
       if (navigator.share) {
-        await navigator.share({
-          title,
-          text: caption,
-          url: shareUrl,
-        });
+        await navigator.share({ title, text: caption, url: shareUrl });
       } else {
         await copyToClipboard();
       }
     } catch (err) {
-      // User canceled OR error → fallback
       console.warn("Share failed or canceled", err);
       await copyToClipboard();
     } finally {
@@ -53,34 +42,18 @@ export default function ReelShare({
 
   return (
     <div className="flex flex-col items-center gap-2">
-
-      {/* SHARE BUTTON */}
       <button
         onClick={handleShare}
         disabled={loading}
         aria-label="Share reel"
-        className="
-          text-white
-          p-3
-          rounded-full
-          bg-black/40
-          hover:bg-black/60
-          transition
-          disabled:opacity-50
-        "
+        className="text-white p-3 rounded-full bg-black/40 hover:bg-black/60 transition disabled:opacity-50"
       >
         <Share2 size={20} />
       </button>
 
-      {/* COPY LINK BUTTON (explicit fallback UI) */}
       <button
         onClick={copyToClipboard}
-        className="
-          flex items-center gap-1
-          text-xs text-gray-300
-          hover:text-white
-          transition
-        "
+        className="flex items-center gap-1 text-xs text-gray-300 hover:text-white transition"
       >
         {copied ? (
           <>

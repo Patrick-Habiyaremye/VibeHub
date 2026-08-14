@@ -1,1 +1,12 @@
-@import "tailwindcss"
+ /* index.css */
+@import "tailwindcss";  /* ← needs a semicolon at the end */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes moment-slide {
+  0%   { opacity: 0.4; transform: translateX(-12px) scale(0.94); }
+  100% { opacity: 1;   transform: translateX(0) scale(1); }
+}

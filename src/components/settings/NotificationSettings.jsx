@@ -1,54 +1,36 @@
-import { useState } from "react";
+import { Bell } from "lucide-react";
+import { useSettings } from "../../context/SettingsContext";
+import SettingsCard from "./SettingsCard";
+import Toggle from "./Toggle";
 
 export default function NotificationSettings() {
+  const { settings, updateSettings } = useSettings();
+  if (!settings) return null;
 
-  const [likes, setLikes] = useState(true);
-  const [comments, setComments] = useState(true);
-  const [messages, setMessages] = useState(true);
+  const toggle = (key) => updateSettings({ [key]: !settings[key] }, { debounce: true });
 
   return (
-    <div className="bg-slate-800 p-5 rounded-xl mb-6">
-
-      <h2 className="text-xl text-white mb-4">
-        Notifications 🔔
-      </h2>
-
-      <label className="block text-white mb-2">
-        <input
-          type="checkbox"
-          checked={likes}
-          onChange={() =>
-            setLikes(!likes)
-          }
+    <SettingsCard icon={Bell} title="Notifications" description="Choose what you hear about">
+      <div className="divide-y divide-slate-700/50">
+        <Toggle
+          checked={!!settings.notify_likes}
+          onChange={() => toggle("notify_likes")}
+          label="Smile reactions"
+          description="When someone smiles at your post"
         />
-        {" "}
-        Smile reactions
-      </label>
-
-      <label className="block text-white mb-2">
-        <input
-          type="checkbox"
-          checked={comments}
-          onChange={() =>
-            setComments(!comments)
-          }
+        <Toggle
+          checked={!!settings.notify_comments}
+          onChange={() => toggle("notify_comments")}
+          label="Comments"
+          description="When someone comments on your post"
         />
-        {" "}
-        Comments
-      </label>
-
-      <label className="block text-white">
-        <input
-          type="checkbox"
-          checked={messages}
-          onChange={() =>
-            setMessages(!messages)
-          }
+        <Toggle
+          checked={!!settings.notify_messages}
+          onChange={() => toggle("notify_messages")}
+          label="Messages"
+          description="When you receive a direct message"
         />
-        {" "}
-        Messages
-      </label>
-
-    </div>
+      </div>
+    </SettingsCard>
   );
 }

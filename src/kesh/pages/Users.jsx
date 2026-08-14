@@ -1,74 +1,100 @@
-// import { useEffect, useState } from "react";
-// import { supabase } from "../../supabaseClient";
-
-// export default function Users() {
-//   const [users, setUsers] = useState([]);
-
-//   useEffect(() => {
-//     load();
-//   }, []);
-
-//   async function load() {
-//     const { data } = await supabase
-//       .from("profiles")
-//       .select("*")
-//       .order("created_at", { ascending: false });
-
-//     setUsers(data || []);
-//   }
-
-//   async function banUser(id) {
-//     await supabase.from("profiles").update({ banned: true }).eq("id", id);
-//     load();
-//   }
-
-//   return (
-//     <div>
-//       <h1 className="text-2xl font-bold mb-6">👤 Users</h1>
-
-//       <div className="space-y-3">
-//         {users.map((u) => (
-//           <div
-//             key={u.id}
-//             className="bg-slate-800 p-4 rounded-xl flex justify-between items-center"
-//           >
-//             <div>
-//               <p className="font-bold">{u.username || "No name"}</p>
-//               <p className="text-slate-400 text-sm">{u.email}</p>
-//             </div>
-
-//             <button
-//               onClick={() => banUser(u.id)}
-//               className="bg-red-500 px-3 py-1 rounded"
-//             >
-//               Ban
-//             </button>
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// }
-
-import AdminLayout from "../AdminLayout";
+// pages/Users.jsx
+import { useState } from "react";
 import useUsers from "../hooks/useUsers";
 import UserRow from "../components/UserRow";
+import ConfirmDialog from "../components/ConfirmDialog";
+import ErrorBanner from "../components/ErrorBanner";
 
 export default function Users() {
-  const { users, banUser, changeRole } = useUsers();
+  const {
+    users,
+    total,
+    page,
+    setPage,
+    pageSize,
+    search,
+    setSearch,
+    loading,
+    error,
+    load,
+    banUser,
+    unbanUser,
+    changeRole,
+  } = useUsers();
+
+  const [pendingBan, setPendingBan] = useState(null);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <AdminLayout>
+    <>
       <h1 className="text-2xl font-bold mb-6">Users</h1>
 
-      {users.map((u) => (
-        <UserRow
-          key={u.id}
-          user={u}
-          onBan={banUser}
-          onRole={changeRole}
-        />
-      ))}
-    </AdminLayout>
+      <ErrorBanner message={error} onRetry={load} />
+
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => {
+          setPage(0);
+          setSearch(e.target.value);
+        }}
+        placeholder="Search by username or email..."
+        className="w-full bg-slate-800 text-white border border-slate-700 rounded-lg px-3 py-2 mb-4"
+      />
+
+      {loading ? (
+        <div className="text-slate-400">Loading users...</div>
+      ) : users.length === 0 ? (
+        <div className="text-slate-400">No users found.</div>
+      ) : (
+        users.map((u) => (
+          <UserRow
+            key={u.id}
+            user={u}
+            onBan={setPendingBan}
+            onUnban={unbanUser}
+            onRole={changeRole}
+          />
+        ))
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm text-slate-400">
+          <button
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            className="px-3 py-1 rounded bg-slate-800 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span>
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            disabled={page + 1 >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="px-3 py-1 rounded bg-slate-800 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!pendingBan}
+        title="Ban this user?"
+        description={
+          pendingBan &&
+          `${pendingBan.username} won't be able to log in until an admin unbans them.`
+        }
+        confirmLabel="Ban user"
+        danger
+        onConfirm={() => {
+          banUser(pendingBan.id);
+          setPendingBan(null);
+        }}
+        onCancel={() => setPendingBan(null)}
+      />
+    </>
   );
 }

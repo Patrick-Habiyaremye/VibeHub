@@ -1,22 +1,28 @@
 // src/providers/AppProviders.jsx
-import { FeedProvider } from "../context/FeedContext";
+
 import { NotificationProvider } from "../context/NotificationContext";
-// import { ReelsProvider } from "../context/ReelsContext";
+import { SettingsProvider } from "../context/SettingsContext";
 import { MessageProvider } from "../context/MessageContext";
-import { ChallengeProvider } from "../context/ChallengeContext";
+import { ChallengeProvider } from "../features/challengeHub/context/ChallengeContext";
+import { ChallengeUIProvider } from "../features/challengeHub/context/ChallengeUIContext";
+import { ChallengeSessionProvider } from "../features/challengeHub/context/ChallengeSessionContext";
 
 export default function AppProviders({ children }) {
   return (
-    <FeedProvider>
+  
       <NotificationProvider>
-        
+        <SettingsProvider>
           <MessageProvider>
-            <ChallengeProvider>
+          <ChallengeUIProvider>
+          <ChallengeSessionProvider>
+          <ChallengeProvider>  
               {children}
-            </ChallengeProvider>
+          </ChallengeProvider>
+           </ChallengeSessionProvider>
+          </ChallengeUIProvider> 
           </MessageProvider>
-        
+        </SettingsProvider>
       </NotificationProvider>
-    </FeedProvider>
+    
   );
 }

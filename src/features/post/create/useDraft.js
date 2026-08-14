@@ -1,17 +1,17 @@
+// features/create/useDraft.js
 import { useEffect } from "react";
 import { DraftManager } from "./DraftManager";
 
 export function useDraft({ content, file, setContent, setFile }) {
-  // load draft
   useEffect(() => {
     const draft = DraftManager.load();
     if (draft) {
       setContent(draft.content || "");
-      setFile(null); // ⚠️ cannot restore file
+      setFile(null); // cannot restore a File object from localStorage
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // save draft
   useEffect(() => {
     DraftManager.save({ content });
   }, [content]);

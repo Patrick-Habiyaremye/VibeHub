@@ -6,6 +6,9 @@ const PAGE_SIZE = 10;
 export default function useFeed() {
   const queryClient = useQueryClient();
 
+  // -------------------------
+  // QUERY
+  // -------------------------
   const query = useInfiniteQuery({
     queryKey: ["feed"],
     queryFn: async ({ pageParam = 0 }) => {
@@ -23,49 +26,71 @@ export default function useFeed() {
 
       if (error) throw error;
 
-      return data;
+      return data ?? [];
     },
 
     getNextPageParam: (lastPage, allPages) => {
-      if (lastPage.length < PAGE_SIZE) return undefined;
-      return allPages.length;
+      if (!lastPage || lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.length; // next page index
     },
 
     staleTime: 1000 * 60,
   });
 
-  // 🔥 Flatten pages
-  const feed = query.data?.pages.flat() ?? [];
+  // -------------------------
+  // FLATTEN (SAFE)
+  // -------------------------
+  const feed =
+    query.data?.pages.flatMap((page) => page) ?? [];
 
   // -------------------------
-  // INSERT POST (CACHE LEVEL)
+  // INSERT POST (DEDUP SAFE)
   // -------------------------
   const insertPost = (post) => {
     queryClient.setQueryData(["feed"], (old) => {
       if (!old) return old;
 
-      // prevent duplicates
-      const exists = old.pages.some((page) =>
-        page.some((p) => p.id === post.id)
-      );
+      // 🔥 GLOBAL dedup (not per-page)
+      const allPosts = old.pages.flat();
+      const exists = allPosts.some((p) => p.id === post.id);
+
       if (exists) return old;
 
       return {
         ...old,
         pages: [
-          [post, ...old.pages[0]],
+          [post, ...(old.pages[0] || [])],
           ...old.pages.slice(1),
         ],
       };
     });
   };
 
+  // -------------------------
+  // RESET (REAL FIX)
+  // -------------------------
+  const resetFeed = () => {
+    queryClient.removeQueries({ queryKey: ["feed"] });
+  };
+
+  // -------------------------
+  // RETURN API
+  // -------------------------
   return {
     feed,
+
+    // pagination
     fetchMore: query.fetchNextPage,
     hasMore: query.hasNextPage,
-    loading: query.isFetching,
+
+    // loading states (granular)
+    loadingInitial: query.isLoading,
+    loadingMore: query.isFetchingNextPage,
+    refreshing: query.isRefetching,
+
+    // actions
     insertPost,
+    resetFeed,
     refetch: query.refetch,
   };
 }

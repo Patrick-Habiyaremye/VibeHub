@@ -1,27 +1,27 @@
 // features/post/PostContent.jsx
 
-export default function PostContent({
-  content,
-}) {
+// export default function PostContent({
+//   content,
+// }) {
 
-  if (!content) return null;
+//   if (!content) return null;
 
-  return (
+//   return (
 
-    <div className="mt-4">
+//     <div className="mt-4">
 
-      <p
-        className="
-          text-slate-200
-          whitespace-pre-wrap
-          leading-relaxed
-        "
-      >
-        {content}
-      </p>
+//       <p
+//         className="
+//           text-slate-200
+//           whitespace-pre-wrap
+//           leading-relaxed
+//         "
+//       >
+//         {content}
+//       </p>
 
-    </div>
+//     </div>
 
-  );
+//   );
 
-}
+// }

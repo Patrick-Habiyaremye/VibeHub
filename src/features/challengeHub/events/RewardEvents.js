@@ -1,0 +1,6 @@
+export const RewardEvents = {
+  SCORE_UPDATED: "SCORE_UPDATED",
+  XP_GAINED: "XP_GAINED",
+  LEVEL_UP: "LEVEL_UP",
+  BADGE_UNLOCKED: "BADGE_UNLOCKED",
+};

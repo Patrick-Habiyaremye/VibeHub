@@ -1,7 +1,5 @@
 // components/LiveTicker.jsx
 
-// 
-
 import { useState, useEffect } from "react";
 import useRealtimeAdmin from "../hooks/useRealtimeAdmin";
 

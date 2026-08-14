@@ -1,512 +1,206 @@
-// import {
-//   useEffect,
-//   useMemo,
-//   useRef,
-//   useState,
-// } from "react";
-
-// import { getFeed } from "../../api/content";
-
-// import ReelCard from "../../features/reels/ReelCard";
-// import ReelSkeleton from "../../features/reels/ReelSkeleton";
-
-// export default function ReelFeed({ search = "" }) {
-//   const [feed, setFeed] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [hasMore, setHasMore] = useState(true);
-
-//   const containerRef = useRef(null);
-//   const observer = useRef(null);
-
-//   const [activeIndex, setActiveIndex] = useState(0);
-//   const [activeAudioIndex, setActiveAudioIndex] = useState(null);
-
-//   // -----------------------
-//   // LOAD FEED (UNIFIED)
-//   // -----------------------
-//   useEffect(() => {
-//     const load = async () => {
-//       try {
-//         const data = await getFeed();
-//         setFeed(data || []);
-//       } catch (err) {
-//         console.error(err);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     load();
-//   }, []);
-
-//   // -----------------------
-//   // 🎬 DERIVE REELS
-//   // -----------------------
-//   const reels = useMemo(() => {
-//     return feed.filter((p) => p.media_type === "video");
-//   }, [feed]);
-
-//   // -----------------------
-//   // 🔍 SEARCH (FIXED FIELD)
-//   // -----------------------
-//   const filtered = useMemo(() => {
-//     if (!search.trim()) return reels;
-
-//     const q = search.toLowerCase();
-
-//     return reels.filter((r) =>
-//       (r.content || "").toLowerCase().includes(q)
-//     );
-//   }, [reels, search]);
-
-//   // -----------------------
-//   // 👁️ INTERSECTION OBSERVER
-//   // -----------------------
-//   useEffect(() => {
-//     if (!containerRef.current) return;
-
-//     observer.current?.disconnect();
-
-//     observer.current = new IntersectionObserver(
-//       (entries) => {
-//         entries.forEach((entry) => {
-//           if (!entry.isIntersecting) return;
-//           if (entry.intersectionRatio < 0.85) return;
-
-//           const index = Number(entry.target.dataset.index);
-//           setActiveIndex(index);
-
-//           // ⚠️ TEMP: no pagination yet
-//           if (index >= filtered.length - 2 && hasMore) {
-//             // future: cursor pagination
-//             setHasMore(false);
-//           }
-//         });
-//       },
-//       {
-//         root: containerRef.current,
-//         threshold: [0.85],
-//       }
-//     );
-
-//     const items =
-//       containerRef.current.querySelectorAll(".reel-item");
-
-//     items.forEach((item) =>
-//       observer.current.observe(item)
-//     );
-
-//     return () => observer.current?.disconnect();
-//   }, [filtered, hasMore]);
-
-//   // -----------------------
-//   // 🎯 NAVIGATION
-//   // -----------------------
-//   const scrollToIndex = (index) => {
-//     const container = containerRef.current;
-//     if (!container) return;
-
-//     const next = container.children[index];
-//     if (!next) return;
-
-//     container.scrollTo({
-//       top: next.offsetTop,
-//       behavior: "smooth",
-//     });
-
-//     setActiveIndex(index);
-//   };
-
-//   const handleVideoEnd = () => {
-//     const next = activeIndex + 1;
-//     if (next >= filtered.length) return;
-//     scrollToIndex(next);
-//   };
-
-//   // -----------------------
-//   // UI STATES
-//   // -----------------------
-//   if (loading) {
-//     return (
-//       <div className="space-y-4 p-4">
-//         <ReelSkeleton />
-//         <ReelSkeleton />
-//       </div>
-//     );
-//   }
-
-//   if (!filtered.length) {
-//     return (
-//       <div className="flex h-full items-center justify-center text-slate-400">
-//         No reels found.
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div
-//       ref={containerRef}
-//       className="h-full overflow-y-auto snap-y snap-mandatory"
-//     >
-//       {filtered.map((reel, index) => (
-//         <section
-//           key={reel.id}
-//           data-index={index}
-//           className="reel-item snap-start"
-//           style={{
-//             height: "calc(100vh - 72px - 64px)",
-//           }}
-//         >
-//           <div className="mx-auto h-full w-full max-w-[480px]">
-
-//             <ReelCard
-//               reel={reel} // 🔥 SAME DATA MODEL
-//               isActive={index === activeIndex}
-//               preloadNext={index === activeIndex + 1}
-//               isAudioActive={index === activeAudioIndex}
-//               onActivateAudio={() =>
-//                 setActiveAudioIndex(index)
-//               }
-//               onVideoEnd={handleVideoEnd}
-//             />
-
-//           </div>
-//         </section>
-//       ))}
-//     </div>
-//   );
-// }
-// import * as RW from "react-window";
-// import { useMemo, useState } from "react";
-// import useFeed from "../../hooks/useFeed";
-// import ContentCard from "../../features/post/ContentCard";
-// import MediaRenderer from "../../features/post/MediaRenderer";
-
-// const List = RW.FixedSizeList;
-
-// export default function ReelFeed() {
-//   const { feed, fetchMore } = useFeed();
-
-//   const reels = useMemo(
-//     () => feed.filter((p) => p.type === "reel"),
-//     [feed]
-//   );
-
-//   const [activeIndex, setActiveIndex] = useState(0);
-
-//   const Row = ({ index, style }) => {
-//     const post = reels[index];
-//     if (!post) return null;
-
-//     if (index >= reels.length - 2) {
-//       fetchMore();
-//     }
-
-//     return (
-//       <div
-//         style={style}
-//         onMouseEnter={() =>
-//           setActiveIndex(index)
-//         }
-//       >
-//         <ContentCard
-//           className="h-screen bg-black"
-//           media={
-//             <MediaRenderer
-//               post={post}
-//               isActive={index === activeIndex}
-//             />
-//           }
-//         />
-//       </div>
-//     );
-//   };
-
-//   return (
-//     <List
-//       height={window.innerHeight}
-//       itemCount={reels.length}
-//       itemSize={window.innerHeight}
-//       width="100%"
-//     >
-//       {Row}
-//     </List>
-//   );
-// }
-
-
-// import { useEffect, useRef, useState ,forwardRef, useImperativeHandle } from "react";
-// import useFeed from "../../hooks/useFeed";
-// import ContentCard from "../../features/post/ContentCard";
-// import { supabase } from "../../supabaseClient";
-
-// const ReelFeed = forwardRef((props, ref) => {
-//   const { feed, fetchMore, hasMore, insertPost } = useFeed();
-
-//   const containerRef = useRef(null);
-//   const [activeIndex, setActiveIndex] = useState(0);
-
-//   const reels = feed.filter((p) => p.media?.kind === "video");
-//   const handleUpdate = (update) => {
-//   insertPost(update); // reuse your existing state logic
-// };
-
-//     useImperativeHandle(ref, () => ({
-//     handleUpdate,
-//   }));
-
-//   // ---------------------------------
-//   // Scroll (O(1))
-//   // ---------------------------------
-//   useEffect(() => {
-//     const el = containerRef.current;
-//     if (!el) return;
-
-//     let ticking = false;
-
-//     const onScroll = () => {
-//       if (!ticking) {
-//         requestAnimationFrame(() => {
-//           const index = Math.round(
-//             el.scrollTop / el.clientHeight
-//           );
-
-//           setActiveIndex(index);
-
-//           if (index >= reels.length - 2 && hasMore) {
-//             fetchMore();
-//           }
-
-//           ticking = false;
-//         });
-
-//         ticking = true;
-//       }
-//     };
-
-//     el.addEventListener("scroll", onScroll);
-//     return () => el.removeEventListener("scroll", onScroll);
-//   }, [reels.length, hasMore]);
-
-//   // ---------------------------------
-//   // Initial load
-//   // ---------------------------------
-//   useEffect(() => {
-//     fetchMore();
-//   }, []);
-
-//   // ---------------------------------
-//   // Realtime (video only)
-//   // ---------------------------------
-//   useEffect(() => {
-//     const channel = supabase
-//       .channel("reels")
-//       .on(
-//         "postgres_changes",
-//         {
-//           event: "INSERT",
-//           schema: "public",
-//           table: "posts",
-//         },
-//         async (payload) => {
-//           const post = payload.new;
-
-//           if (post.media?.kind !== "video") return;
-
-//           const { data: profile } = await supabase
-//             .from("profiles")
-//             .select("username, avatar_url")
-//             .eq("id", post.user_id)
-//             .single();
-
-//           insertPost({
-//             ...post,
-//             profiles: profile,
-//           });
-//         }
-//       )
-//       .subscribe();
-
-//     return () => supabase.removeChannel(channel);
-//   }, [insertPost]);
-
-//   // ---------------------------------
-//   // UI
-//   // ---------------------------------
-//   if (reels.length === 0) {
-//     return <p className="text-center text-gray-400 mt-10">No reels yet</p>;
-//   }
-
-//   return (
-//     <div
-//       ref={containerRef}
-//       className="h-full overflow-y-scroll snap-y snap-mandatory"
-//     >
-//       {reels.map((post, index) => (
-//         <div key={post.id} className="h-full snap-start">
-//           <ContentCard
-//             post={post}
-//             isActive={index === activeIndex}
-//           />
-//         </div>
-//       ))}
-//     </div>
-//   );
-// })
-
-// export default ReelFeed;
-
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
-
-import useFeed from "../../hooks/useFeed";
-import { supabase } from "../../supabaseClient";
-
-import ContentCard from "../../features/post/ContentCard";
-
-const ReelFeed = forwardRef(({ search = "" }, ref) => {
-  const { feed, fetchMore, hasMore, insertPost } = useFeed();
+// pages/Discover/ReelFeed.jsx
+//
+// CHANGES this pass:
+// 1. Reapplied the Phase 1 fix that had reverted: destructures `remove`
+//    from useReels() and passes it as onDeleted, instead of a no-op.
+// 2. Added navigation to the immersive /reel/:id route. handleOpenReel
+//    is built with useCallback + a ref mirror of `filtered` (rather than
+//    depending on `filtered` directly) so its identity stays stable
+//    across pagination/search changes — a fresh callback reference on
+//    every filtered update would otherwise defeat ReelCard's memo
+//    comparator for every visible card on every page load.
+
+import { useRef, useState, useMemo, useEffect, useLayoutEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
+
+import ReelCard from "../../features/reels/ReelCard";
+import useReels from "../../hooks/useReels";
+import { useUploadQueueUI } from "../../hooks/useUploadQueueUI";
+
+const ReelFeed = ({ search = "", onActiveReelChange, onOpenComments }) => {
+  const { reels, fetchMore, hasMore, remove } = useReels();
+  const uploads = useUploadQueueUI();
+  const navigate = useNavigate();
 
   const containerRef = useRef(null);
+
   const [activeIndex, setActiveIndex] = useState(0);
+  const [rowHeight, setRowHeight] = useState(0);
 
-  // -----------------------
-  // 🎬 DERIVE REELS
-  // -----------------------
-  const reels = useMemo(() => {
-    return feed.filter((p) => p.media?.kind === "video");
-  }, [feed]);
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-  // -----------------------
-  // 🔍 SEARCH
-  // -----------------------
-  const filtered = useMemo(() => {
-    if (!search.trim()) return reels;
-
-    const q = search.toLowerCase();
-
-    return reels.filter((r) =>
-      (r.content || "").toLowerCase().includes(q)
-    );
-  }, [reels, search]);
-
-  // -----------------------
-  // HANDLE UPDATE (UPLOAD)
-  // -----------------------
-  const handleUpdate = (update) => {
-    insertPost(update);
-  };
-
-  useImperativeHandle(ref, () => ({
-    handleUpdate,
-  }));
-
-  // -----------------------
-  // INITIAL LOAD
-  // -----------------------
-  useEffect(() => {
-    fetchMore();
-  }, []);
-
-  // -----------------------
-  // SCROLL SNAP + PAGINATION
-  // -----------------------
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    let ticking = false;
-
-    const onScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          const index = Math.round(
-            el.scrollTop / el.clientHeight
-          );
-
-          setActiveIndex(index);
-
-          if (index >= filtered.length - 2 && hasMore) {
-            fetchMore();
-          }
-
-          ticking = false;
-        });
-
-        ticking = true;
-      }
+    const updateHeight = () => {
+      const h = container.clientHeight;
+      if (h > 0) setRowHeight(h);
     };
 
-    el.addEventListener("scroll", onScroll);
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [filtered.length, hasMore, fetchMore]);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
-  // -----------------------
-  // REALTIME
-  // -----------------------
-  useEffect(() => {
-    const channel = supabase
-      .channel("reels")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "posts" },
-        async (payload) => {
-          const post = payload.new;
+  const merged = useMemo(() => {
+    const uploadCards = uploads.map((u) => {
+      const width = u.width ?? 0;
+      const height = u.height ?? 0;
+      return {
+        id: u.id,
+        fileId: u.fileId,
+        uploading: true,
+        status: u.status,
+        progress: u.progress ?? 0,
+        error: u.error ?? null,
+        content: u.caption ?? "",
+        media: u.finalUrl ? { url: u.finalUrl, width, height } : null,
+        width,
+        height,
+        hasThumbnail: !!u.hasThumbnail,
+        user_id: u.userId,
+        created_at: u.createdAt ?? Date.now(),
+      };
+    });
 
-          if (post.media?.kind !== "video") return;
+    const uploadingIds = new Set(uploadCards.map((u) => u.id));
+    const filteredReels = (reels || []).filter((r) => !uploadingIds.has(r.id));
 
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("username, avatar_url")
-            .eq("id", post.user_id)
-            .single();
-
-          insertPost({
-            ...post,
-            profiles: profile,
-          });
-        }
-      )
-      .subscribe();
-
-    return () => supabase.removeChannel(channel);
-  }, [insertPost]);
-
-  // -----------------------
-  // UI
-  // -----------------------
-  if (!filtered.length) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-400">
-        No reels found
-      </div>
+    return [...uploadCards, ...filteredReels].sort(
+      (a, b) => (b.created_at || 0) - (a.created_at || 0)
     );
-  }
+  }, [uploads, reels]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return merged;
+    const q = search.toLowerCase();
+    return merged.filter((r) => (r.content || r.caption || "").toLowerCase().includes(q));
+  }, [merged, search]);
+
+  // Mirrors `filtered` without forcing handleOpenReel to be recreated
+  // every time it changes — see file header.
+  const filteredRef = useRef(filtered);
+  useEffect(() => {
+    filteredRef.current = filtered;
+  }, [filtered]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => rowHeight || window.innerHeight,
+    overscan: 3,
+  });
+
+  useEffect(() => {
+    if (rowHeight) rowVirtualizer.measure();
+  }, [rowHeight, rowVirtualizer]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const items = rowVirtualizer.getVirtualItems();
+      if (!items.length) return;
+
+      const viewportCenter = container.scrollTop + container.clientHeight / 2;
+      let closest = items[0];
+      let minDistance = Infinity;
+
+      for (const item of items) {
+        const itemCenter = item.start + item.size / 2;
+        const distance = Math.abs(itemCenter - viewportCenter);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closest = item;
+        }
+      }
+
+      setActiveIndex(closest.index);
+    };
+
+    handleScroll();
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [rowVirtualizer]);
+
+  useEffect(() => {
+    const items = rowVirtualizer.getVirtualItems();
+    if (!items.length) return;
+    const lastItem = items[items.length - 1];
+    if (lastItem.index >= filtered.length - 3 && hasMore) fetchMore();
+  }, [filtered.length, hasMore, fetchMore, rowVirtualizer]);
+
+  useEffect(() => {
+    onActiveReelChange?.(filtered[activeIndex] ?? null);
+  }, [activeIndex, filtered, onActiveReelChange]);
+
+  const handleReelEnd = useCallback(
+    (postId) => {
+      const idx = filtered.findIndex((p) => p.id === postId);
+      if (idx === -1) return;
+
+      const nextIndex = idx + 1;
+      if (nextIndex >= filtered.length) return;
+
+      rowVirtualizer.scrollToIndex(nextIndex, { align: "start", behavior: "smooth" });
+    },
+    [filtered, rowVirtualizer]
+  );
+
+  // Canonical entry point into the immersive route (§40). Stable identity
+  // across renders — see filteredRef above.
+  const handleOpenReel = useCallback(
+    (postId) => {
+      const list = filteredRef.current;
+      const idx = list.findIndex((p) => p.id === postId);
+      if (idx === -1) return;
+
+      navigate(`/reel/${postId}`, { state: { reels: list, index: idx } });
+    },
+    [navigate]
+  );
 
   return (
     <div
       ref={containerRef}
-      className="h-full overflow-y-scroll snap-y snap-mandatory"
+      className="h-full w-full overflow-y-scroll snap-y snap-mandatory overscroll-contain"
     >
-      {filtered.map((post, index) => (
-        <div
-          key={post.id}
-          className="h-full snap-start"
-        >
-          <ContentCard
-            post={post}
-            isActive={index === activeIndex}
-          />
-        </div>
-      ))}
+      <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const post = filtered[virtualRow.index];
+          if (!post) return null;
+
+          return (
+            <div
+              key={post.id}
+              className="snap-start"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+                scrollSnapStop: "always",
+              }}
+            >
+              <ReelCard
+                reel={post}
+                isActive={virtualRow.index === activeIndex}
+                priority={Math.abs(virtualRow.index - activeIndex) <= 1}
+                onOpenComments={onOpenComments}
+                onDeleted={remove}
+                onReelEnd={handleReelEnd}
+                onOpenReel={handleOpenReel}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
-});
+};
 
 export default ReelFeed;

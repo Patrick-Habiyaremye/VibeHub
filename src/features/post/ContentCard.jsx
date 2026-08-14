@@ -1,134 +1,76 @@
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-  memo,
-} from "react";
+// FILE: src/components/post/ContentCard.jsx
+
+import React, { useState, useCallback, useEffect, memo } from "react";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { deletePost } from "../../services/postService";
 
-// UI
+import CardHeader from "./card/CardHeader";
 import MediaRenderer from "./MediaRenderer";
-import ReactionBar from "./card/ReactionBar";
-import CommentSection from "./card/CommentSection";
-import CommentComposer from "./card/CommentComposer";
+import { ReactionBar } from "../../features/reactions";
 
-import BookmarkButton from "./card/BookmarkButton";
+import SaveButton from "./card/SaveButton";
 import ShareButton from "./card/ShareButton";
 import SupportButton from "./card/SupportButton";
 import ReportButton from "./card/ReportButton";
 
 import ContentSkeleton from "./card/ContentSkeleton";
 import ContentError from "./card/ContentError";
-import ContentMedia from "./ContentMedia";
-// hooks
+
+import { CommentSection } from "../../features/comments";
+import { resolveQuoteBackground } from "../../features/post/create/engines/StyleEngine";
+
 import useIntersectionAnimation from "./card/hooks/useIntersectionAnimation";
-import useReactions from "./card/hooks/useReactions";
-import useComments from "./card/hooks/useComments";
-import useCommentsRealtime from "./card/hooks/useCommentsRealtime";
-import usePostMutations from "./card/hooks/usePostMutations";
 import useShare from "./card/hooks/useShare";
-import useSupport from "./card/hooks/useSupport";
 import useReports from "./card/hooks/useReports";
 import useKeyboardActions from "./card/hooks/useKeyboardActions";
 
-//--------------------------------------------------
-// COMPONENT
-//--------------------------------------------------
+const QUOTE_SERIF = { fontFamily: "'Fraunces', Georgia, serif" };
 
-function ContentCard({ post }) {
+function ContentCard({ post, isActive = false, priority = false, onDeleted }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [showComments, setShowComments] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
-  //--------------------------------------------------
-  // VISIBILITY (perf)
-  //--------------------------------------------------
+  const { ref, isVisible } = useIntersectionAnimation({ rootMargin: "600px" });
 
-  const { ref, isVisible } = useIntersectionAnimation({
-    rootMargin: "600px",
-  });
-
-  //--------------------------------------------------
-  // DATA HOOKS
-  //--------------------------------------------------
-
-  const reactions = useReactions(post?.id, {
-    enabled: !!post && isVisible,
-  });
-
-  const comments = useComments(post?.id, {
-    enabled: !!post && showComments && isVisible,
-  });
-
-  useCommentsRealtime(post?.id, {
-    enabled: !!post && isVisible,
-  });
-
-  const { react } = usePostMutations();
+  // Single ownership of each cross-cutting concern — no duplicate hooks.
   const share = useShare(post?.id);
-  const support = useSupport(post?.id);
-  const reports = useReports(post?.id);
+  const reports = useReports(post?.id, "post");
 
-  //--------------------------------------------------
-  // BATCHED REACTION
-  //--------------------------------------------------
+  const canDelete = !!user && user.id === post?.user_id;
+  const isSelf = !!user && user.id === post?.user_id;
 
-  const queue = useRef(null);
+  const handleDelete = useCallback(async () => {
+    if (!post?.id || deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deletePost(post.id);
+      onDeleted?.(post.id);
+      setConfirmDelete(false);
+    } catch (err) {
+      setDeleteError(err.message || "Failed to delete post.");
+    } finally {
+      setDeleting(false);
+    }
+  }, [post?.id, deleting, onDeleted]);
 
-  const handleReact = useCallback(
-    (type) => {
-      if (!user) {
-        navigate("/login");
-        return;
-      }
-
-      if (!post?.id) return;
-
-      if (queue.current) clearTimeout(queue.current);
-
-      queue.current = setTimeout(() => {
-        react({ postId: post.id, type });
-      }, 200);
-    },
-    [react, post?.id, user, navigate]
-  );
-
-  //--------------------------------------------------
-  // KEYBOARD SHORTCUTS
-  //--------------------------------------------------
+  const handleRequireAuth = useCallback(() => navigate("/login"), [navigate]);
 
   useKeyboardActions({
     enabled: !!post && isVisible,
-    onLike: () => handleReact("smile"),
     onComment: () => setShowComments(true),
     onShare: share.share,
   });
 
-  //--------------------------------------------------
-  // DERIVED STATS
-  //--------------------------------------------------
-
-  const stats = useMemo(() => {
-    return {
-      smiles: reactions?.data?.smiles ?? 0,
-      comments: reactions?.data?.comments ?? 0,
-      shares: reactions?.data?.shares ?? 0,
-    };
-  }, [reactions?.data]);
-
-  //--------------------------------------------------
-  // SAFETY
-  //--------------------------------------------------
-
   if (!post) return <ContentError message="Post not found" />;
-
-  if (post.deleted) {
-    return <ContentError message="This post was removed" />;
-  }
+  if (post.deleted) return <ContentError message="This post was removed" />;
 
   if (!isVisible) {
     return (
@@ -138,128 +80,131 @@ function ContentCard({ post }) {
     );
   }
 
-  //--------------------------------------------------
-  // RENDER
-  //--------------------------------------------------
+  const isQuote = post.media?.kind === "quote";
+  const quoteText = isQuote ? post.content?.trim() || "" : "";
+  const caption = !isQuote ? post.content?.trim() || "" : "";
 
   return (
     <article
       ref={ref}
-      className="
-        bg-slate-900
-        rounded-2xl
-        overflow-hidden
-        mb-6
-        border border-slate-800
-        hover:border-yellow-500/30
-        transition
-      "
+      className="relative bg-slate-900 rounded-2xl overflow-hidden border border-slate-800"
     >
-      {/* HEADER */}
-      <div className="flex items-center gap-3 p-2">
-        <img
-          src={post.profiles?.avatar_url}
-          className="w-10 h-10 rounded-full object-cover"
-        />
+      <CardHeader
+        post={post}
+        canDelete={canDelete}
+        onDelete={() => {
+          if (!canDelete) return;
+          setDeleteError(null);
+          setConfirmDelete(true);
+        }}
+        onReport={() => reports.report("inappropriate")}
+      />
 
-        <div className="flex-1">
-          <div className="font-semibold text-white">
-            {post.profiles?.username || "Unknown"}
-          </div>
-
-          <div className="text-xs text-slate-400">
-            {new Date(post.created_at).toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      {/* TEXT */}
-      {post.content && post.media?.type !== "quote" && (
-        <div className="px-4 pb-3 text-sm text-slate-300">
-          {post.content}
+      {isQuote && quoteText && (
+        <div className="mx-4 mb-2">
+          <blockquote
+            className="rounded-2xl p-20 text-white text-2xl leading-snug text-center"
+            style={{
+              background: resolveQuoteBackground(post.style?.background),
+              ...QUOTE_SERIF,
+            }}
+          >
+            {quoteText}
+          </blockquote>
         </div>
       )}
 
-      {/* MEDIA */}
-      {/* <div className="aspect-[4/5] w-full overflow-hidden">
-  <MediaRenderer post={post} isActive={isVisible} />
-</div> */}
-      {/* <div className="bg-black">
-        <MediaContainer>
-  <MediaRenderer post={post} isActive={isVisible} />
-</MediaContainer>
-      </div> */}
+      {!isQuote && caption && (
+        <div className="px-4 pb-3 text-sm text-slate-300">{caption}</div>
+      )}
 
-      <div className="">
-        <ContentMedia>
-          <MediaRenderer post={post} isActive={isVisible} />
-        </ContentMedia>
-      </div>
+      {!isQuote && (
+        <MediaRenderer post={post} isActive={isActive} priority={priority} />
+      )}
 
-      {/* STATS */}
-      <div className="px-4 pt-3 text-xs text-slate-400 flex gap-4">
-        <span>{stats.smiles} smiles</span>
-        <span>{stats.comments} comments</span>
-        <span>{stats.shares} shares</span>
-        <span>{stats.bookmarks} bookmarks</span>
-      </div>
-
-      {/* ACTIONS */}
       <div className="p-4 border-t border-slate-800 space-y-3">
         {user ? (
           <>
-            {/* <ReactionBar onReact={handleReact} /> */}
-            <ReactionBar post={post} /> 
-            
+            <ReactionBar post={post} />
 
-            <div className="flex gap-6">
-              <BookmarkButton postId={post.id} />
-              <ShareButton onClick={share.share} />
-              <SupportButton onClick={support.support} />
-              <ReportButton onClick={reports.report} />
-            </div>
+            <div className="flex gap-9">
+  <SaveButton contentType="post" contentId={post.id} />
+  <ShareButton onShare={share.share} sharing={share.sharing} />
+  <SupportButton creatorId={post.user_id} isSelf={isSelf} onRequireAuth={handleRequireAuth} />
+  <ReportButton type="post" id={post.id} />
+</div>
 
             <button
-              onClick={() =>
-                setShowComments((s) => !s)
-              }
+              onClick={() => setShowComments((v) => !v)}
               className="text-sm text-slate-400 hover:text-white"
             >
-              {showComments
-                ? "Hide comments"
-                : "View comments"}
+              {showComments ? "Hide comments" : "View comments"}
             </button>
 
             {showComments && (
-              <div className="space-y-3">
-                <CommentSection
-                  postId={post.id}
-                  query={comments}
-                />
-                <CommentComposer postId={post.id} />
-              </div>
+              <CommentSection
+                contentType="post"
+                contentId={post.id}
+                ownerId={post.user_id}
+                onClose={() => setShowComments(false)}
+              />
             )}
           </>
         ) : (
-          <button
-            onClick={() => navigate("/login")}
-            className="text-yellow-400 text-sm"
-          >
+          <button onClick={() => navigate("/login")} className="text-yellow-400 text-sm">
             Sign in to interact
           </button>
         )}
       </div>
+
+      {confirmDelete && (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-post-title"
+        >
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 w-full max-w-sm">
+            <h2 id="delete-post-title" className="text-white text-base font-semibold mb-2">
+              Delete this post?
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              This can't be undone. The post and its media will be permanently removed.
+            </p>
+
+            {deleteError && <p className="text-red-400 text-sm mb-3">{deleteError}</p>}
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                className="text-sm text-slate-300 hover:text-white px-3 py-2 disabled:opacity-40"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="text-sm bg-red-500 hover:bg-red-600 text-white rounded-full px-4 py-2 disabled:opacity-40"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
-
-//--------------------------------------------------
-// MEMO (IMPORTANT)
-//--------------------------------------------------
 
 export default memo(
   ContentCard,
   (prev, next) =>
     prev.post.id === next.post.id &&
-    prev.post.updated_at === next.post.updated_at
+    prev.post.updated_at === next.post.updated_at &&
+    prev.post.smile_score === next.post.smile_score &&
+    prev.isActive === next.isActive &&
+    prev.priority === next.priority
 );

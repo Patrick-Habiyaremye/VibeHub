@@ -1,138 +1,138 @@
-import { useAuth } from "../../context/AuthContext";
+// import { useAuth } from "../../context/AuthContext";
 
-import PostHeader from "./PostHeader";
-import PostContent from "./PostContent";
-import PostMedia from "./PostMedia";
- import SmileMeter from "./SmileMeter";
-import ReactionBar from "./ReactionBar";
-import CommentSection from "./CommentSection";
-import { useNavigate } from "react-router-dom";
+// import PostHeader from "./PostHeader";
+// import PostContent from "./PostContent";
+// import PostMedia from "./PostMedia";
+//  import SmileMeter from "./SmileMeter";
+// import ReactionBar from "./ReactionBar";
+// import CommentSection from "./CommentSection";
+// import { useNavigate } from "react-router-dom";
 
-export default function PostCard({ post }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+// export default function PostCard({ post }) {
+//   const { user } = useAuth();
+//   const navigate = useNavigate();
 
-  if (!post) return null;
+//   if (!post) return null;
 
-  return (
-    <article className="bg-slate-800 border border-slate-700 rounded-2xl p-5 mb-6 transition hover:border-yellow-500/30">
+//   return (
+//     <article className="bg-slate-800 border border-slate-700 rounded-2xl p-5 mb-6 transition hover:border-yellow-500/30">
 
-      <PostHeader
-        profile={post.profiles}
-        createdAt={post.created_at}
-      />
+//       <PostHeader
+//         profile={post.profiles}
+//         createdAt={post.created_at}
+//       />
 
-      <PostContent content={post.content} />
+//       <PostContent content={post.content} />
 
-      <PostMedia post={post} />
+//       <PostMedia post={post} />
 
-      {/* <SmileMeter postId={post.id} /> */}
+//       {/* <SmileMeter postId={post.id} /> */}
 
-      {/* AUTH GATED AREA */}
-      {user ? (
-        <>
-          <ReactionBar post={post} />
-          <CommentSection postId={post.id} />
-        </>
-      ) : (
-        <div className="mt-5 border-t border-slate-700 pt-4">
-          <p className="text-slate-400 text-sm mb-2">
-            Join to react, comment and spread kindness 💛
-          </p>
+//       {/* AUTH GATED AREA */}
+//       {user ? (
+//         <>
+//           <ReactionBar post={post} />
+//           <CommentSection postId={post.id} />
+//         </>
+//       ) : (
+//         <div className="mt-5 border-t border-slate-700 pt-4">
+//           <p className="text-slate-400 text-sm mb-2">
+//             Join to react, comment and spread kindness 💛
+//           </p>
 
-          <button
-            onClick={() => navigate("/login")}
-            className="text-yellow-400 hover:underline text-sm"
-          >
-            Sign in to continue →
-          </button>
-        </div>
-      )}
-    </article>
-  );
-}
+//           <button
+//             onClick={() => navigate("/login")}
+//             className="text-yellow-400 hover:underline text-sm"
+//           >
+//             Sign in to continue →
+//           </button>
+//         </div>
+//       )}
+//     </article>
+//   );
+// }
 
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+// import { useNavigate } from "react-router-dom";
+// import { useAuth } from "../../context/AuthContext";
 
-import PostHeader from "./PostHeader";
-import PostContent from "./PostContent";
-import MediaRenderer from "../../features/post/MediaRenderer";
+// import PostHeader from "./PostHeader";
+// import PostContent from "./PostContent";
+// import MediaRenderer from "../../features/post/MediaRenderer";
 
-import ReactionBar from "./ReactionBar";
-import CommentSection from "./CommentSection";
+// import ReactionBar from "./ReactionBar";
+// import CommentSection from "./CommentSection";
 
-export default function PostCard({ post }) {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+// export default function PostCard({ post }) {
+//   const { user } = useAuth();
+//   const navigate = useNavigate();
 
-  if (!post) return null;
+//   if (!post) return null;
 
-  return (
-    <article
-      className="
-        bg-slate-800
-        border
-        border-slate-700
-        rounded-2xl
-        overflow-hidden
-        mb-6
-        transition
-        hover:border-yellow-500/30
-      "
-    >
-      <div className="p-5">
+//   return (
+//     <article
+//       className="
+//         bg-slate-800
+//         border
+//         border-slate-700
+//         rounded-2xl
+//         overflow-hidden
+//         mb-6
+//         transition
+//         hover:border-yellow-500/30
+//       "
+//     >
+//       <div className="p-5">
 
-        <PostHeader
-          profile={post.profiles}
-          createdAt={post.created_at}
-        />
+//         <PostHeader
+//           profile={post.profiles}
+//           createdAt={post.created_at}
+//         />
 
-        <PostContent
-          content={post.content}
-        />
+//         <PostContent
+//           content={post.content}
+//         />
 
-      </div>
+//       </div>
 
-      {/* MEDIA */}
-      <MediaRenderer post={post} />
+//       {/* MEDIA */}
+//       <MediaRenderer post={post} />
 
-      {user ? (
-        <div className="p-5">
+//       {user ? (
+//         <div className="p-5">
 
-          <ReactionBar
-            post={post}
-          />
+//           <ReactionBar
+//             post={post}
+//           />
 
-          <CommentSection
-            postId={post.id}
-          />
+//           <CommentSection
+//             postId={post.id}
+//           />
 
-        </div>
-      ) : (
-        <div
-          className="
-            border-t
-            border-slate-700
-            p-5
-          "
-        >
-          <p className="text-slate-400 text-sm mb-3">
-            Join to react, comment and spread kindness 💛
-          </p>
+//         </div>
+//       ) : (
+//         <div
+//           className="
+//             border-t
+//             border-slate-700
+//             p-5
+//           "
+//         >
+//           <p className="text-slate-400 text-sm mb-3">
+//             Join to react, comment and spread kindness 💛
+//           </p>
 
-          <button
-            onClick={() => navigate("/login")}
-            className="
-              text-yellow-400
-              hover:underline
-              text-sm
-            "
-          >
-            Sign in to continue →
-          </button>
-        </div>
-      )}
-    </article>
-  );
-}
+//           <button
+//             onClick={() => navigate("/login")}
+//             className="
+//               text-yellow-400
+//               hover:underline
+//               text-sm
+//             "
+//           >
+//             Sign in to continue →
+//           </button>
+//         </div>
+//       )}
+//     </article>
+//   );
+// }

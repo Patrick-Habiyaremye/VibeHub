@@ -1,4 +1,7 @@
 import { supabase } from "../supabaseClient";
+import { normalizeComment } from "../utils/normalizeComment";
+
+const DEFAULT_LIMIT = 10;
 
 //--------------------------------------------------
 // CREATE
@@ -31,13 +34,17 @@ export async function createComment({
 
   if (error) throw error;
 
-  return data;
+  return normalizeComment(data);
 }
+
+ //--------------------------------------------------
+ // READ (paginated, consistent contract)
+ //--------------------------------------------------
 
 export async function getComments({
   postId,
   cursor = null,
-  limit = 10,
+  limit = DEFAULT_LIMIT,
 }) {
   let query = supabase
     .from("comments")
@@ -55,11 +62,21 @@ export async function getComments({
   }
 
   const { data, error } = await query;
-
   if (error) throw error;
 
-  return data;
+  const normalized = data.map(normalizeComment);
+
+  return {
+    data: normalized,
+    nextCursor: normalized.length
+      ? normalized[normalized.length - 1].created_at
+      : null,
+  };
 }
+
+ //--------------------------------------------------
+ // REPLIES
+ //--------------------------------------------------
 
 export async function getReplies(commentId) {
   const { data, error } = await supabase
@@ -73,32 +90,75 @@ export async function getReplies(commentId) {
 
   if (error) throw error;
 
-  return data;
+  return data.map(normalizeComment);
 }
 
+ //--------------------------------------------------
+ // DELETE (safer)
+ //--------------------------------------------------
+
 export async function deleteComment(id) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Unauthorized");
+
   const { error } = await supabase
     .from("comments")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id); // enforce ownership
 
   if (error) throw error;
+
+  return true;
 }
+
+ //--------------------------------------------------
+ // REALTIME (explicit + structured)
+ //--------------------------------------------------
 
 export function subscribeToComments(postId, cb) {
   const channel = supabase
     .channel(`comments-${postId}`)
+
     .on(
       "postgres_changes",
       {
-        event: "*",
+        event: "INSERT",
         schema: "public",
         table: "comments",
         filter: `post_id=eq.${postId}`,
       },
-      cb
+      (payload) => cb({ ...payload, type: "INSERT" })
     )
+
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "comments",
+        filter: `post_id=eq.${postId}`,
+      },
+      (payload) => cb({ ...payload, type: "DELETE" })
+    )
+
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "comments",
+        filter: `post_id=eq.${postId}`,
+      },
+      (payload) => cb({ ...payload, type: "UPDATE" })
+    )
+
     .subscribe();
 
-  return () => supabase.removeChannel(channel);
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

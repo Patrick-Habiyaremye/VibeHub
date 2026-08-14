@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 
-import { getPosts } from "../api/posts";
+import { getPosts } from "../api/postsApi";
 
 const FeedContext =
   createContext();
