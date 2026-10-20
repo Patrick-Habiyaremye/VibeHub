@@ -1,32 +1,106 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+const COLORS = {
+  background: '#05091A',
+  border: '#252E45',
+  active: '#FFD21F',
+  inactive: '#9CA8C2',
+};
+
+const TAB_ICONS: Record<string, string> = {
+  index: '🏠',
+  reels: '🎬',
+  challenges: '🌈',
+  messages: '💬',
+  profile: '👤',
+};
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
   return (
-    <NativeTabs
-      backgroundColor={colors.background}
-      indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.text } }}>
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
+    <Tabs
+      screenOptions={({ route }) => ({
+        headerShown: false,
 
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
-          renderingMode="template"
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+        sceneStyle: {
+          backgroundColor: COLORS.background,
+        },
+
+        tabBarStyle: {
+          backgroundColor: COLORS.background,
+          borderTopColor: COLORS.border,
+          borderTopWidth: 1,
+          height: 76,
+          paddingTop: 8,
+          paddingBottom: 10,
+          elevation: 0,
+        },
+
+        tabBarActiveTintColor: COLORS.active,
+        tabBarInactiveTintColor: COLORS.inactive,
+
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: 3,
+        },
+
+        tabBarIcon: ({ focused }) => (
+          <Text
+            style={{
+              fontSize: 22,
+              opacity: focused ? 1 : 0.72,
+              transform: [{ scale: focused ? 1.08 : 1 }],
+            }}
+          >
+            {TAB_ICONS[route.name] ?? '•'}
+          </Text>
+        ),
+
+        tabBarHideOnKeyboard: true,
+      })}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Feed',
+        }}
+      />
+
+      <Tabs.Screen
+        name="reels"
+        options={{
+          title: 'Smile Reels',
+        }}
+      />
+
+      <Tabs.Screen
+        name="challenges"
+        options={{
+          title: 'Challenges',
+        }}
+      />
+
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages',
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+        }}
+      />
+
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
+        }}
+      />
+    </Tabs>
   );
 }

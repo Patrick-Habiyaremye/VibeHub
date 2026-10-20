@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "mobile-clean",
-    "slug": "mobile-clean",
+    "name": "VibeHub",
+    "slug": "vibehub-mobile",
+    "scheme": "vibehub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobileclean",
     "userInterfaceStyle": "automatic",
     "android": {
       "adaptiveIcon": {
